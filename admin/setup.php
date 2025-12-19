@@ -839,11 +839,11 @@ print '        var configContent = document.getElementById("configContent");';
 print '        var backupContent = document.getElementById("backupContent");';
 print '        var logsContent = document.getElementById("logsContent");';
 print '        var aboutContent = document.getElementById("aboutContent");';
-print '        if (!configTab || !backupTab || !logsTab || !aboutTab) {';
+print '        if (!configTab || !backupTab || !logsTab || !maintenanceTab || !aboutTab) {';
 print '            console.error("No se encontraron los elementos de pestañas");';
 print '            return false;';
 print '        }';
-print '        [configTab, backupTab, logsTab, aboutTab].forEach(function(tab) {';
+print '        [configTab, backupTab, logsTab, maintenanceTab, aboutTab].forEach(function(tab) {';
 print '            if (tab) {';
 print '                tab.classList.remove("active");';
 print '                tab.classList.add("inactive");';
@@ -880,6 +880,7 @@ print '<div class="setup-nav">';
 print '<button id="configTab" class="setup-nav-btn active" onclick="switchSetupTab(\'config\')"><i class="fas fa-cog"></i> <span>' . $langs->trans('Configuration') . '</span></button>';
 print '<button id="backupTab" class="setup-nav-btn inactive" onclick="switchSetupTab(\'backup\')"><i class="fas fa-shield-alt"></i> <span>' . $langs->trans('Backups') . '</span></button>';
 print '<button id="logsTab" class="setup-nav-btn inactive" onclick="switchSetupTab(\'logs\')"><i class="fas fa-history"></i> <span>' . $langs->trans('History') . '</span></button>';
+print '<button id="maintenanceTab" class="setup-nav-btn inactive" onclick="switchSetupTab(\'maintenance\')"><i class="fas fa-wrench"></i> <span>' . $langs->trans('Maintenance') . '</span></button>';
 print '<button id="aboutTab" class="setup-nav-btn inactive" onclick="switchSetupTab(\'about\')"><i class="fas fa-info-circle"></i> <span>' . $langs->trans('About') . '</span></button>';
 print '<button onclick="window.open(\'../index.php\', \'_blank\')" class="setup-nav-btn go-fm"><i class="fas fa-folder-open"></i> <span>' . $langs->trans('FileManager') . '</span></button>';
 print '</div>';
@@ -1963,6 +1964,47 @@ print '</div>';
 print '</div>'; // max-width container
 print '</div>'; // Cierre aboutContent
 
+// ========== PESTAÑA MANTENIMIENTO ==========
+print '<div id="maintenanceContent" style="display: none;">';
+print '<div style="max-width: 1200px; margin: 0 auto; padding: 20px;">';
+
+// Header de la pestaña
+print '<div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border: 1px solid #cbd5e1; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+print '<h2 style="margin: 0 0 8px 0; color: #334155; font-size: 24px; font-weight: 700;"><i class="fas fa-wrench" style="color: #64748b;"></i> ' . $langs->trans('Maintenance') . '</h2>';
+print '<p style="margin: 0; color: #64748b; font-size: 14px;">Herramientas de mantenimiento y limpieza del módulo FileManager</p>';
+print '</div>';
+
+// Sección de Cache
+print '<div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+print '<h3 style="margin: 0 0 16px 0; color: #334155; font-size: 18px; font-weight: 600;"><i class="fas fa-memory" style="color: #3b82f6;"></i> Gestión de Cache</h3>';
+print '<p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px; line-height: 1.5;">';
+print 'El módulo FileManager utiliza varios tipos de cache para mejorar el rendimiento. Purgar el cache puede resolver problemas de funcionamiento pero puede afectar temporalmente la velocidad de carga.';
+print '</p>';
+
+// Información sobre tipos de cache
+print '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">';
+print '<h4 style="margin: 0 0 12px 0; color: #334155; font-size: 14px; font-weight: 600;"><i class="fas fa-info-circle" style="color: #06b6d4;"></i> Tipos de Cache</h4>';
+print '<ul style="margin: 0; padding-left: 20px; color: #64748b; font-size: 13px; line-height: 1.6;">';
+print '<li><strong>Cache de configuración:</strong> Almacena la configuración del módulo en memoria</li>';
+print '<li><strong>Cache de tamaños de carpeta:</strong> Almacena los tamaños calculados de carpetas (5 minutos)</li>';
+print '<li><strong>Cache de archivos optimizados:</strong> Archivos de configuración procesados</li>';
+print '</ul>';
+print '</div>';
+
+// Botón de purga de cache
+print '<div style="text-align: center;">';
+print '<button type="button" onclick="purgeFileManagerCache()" id="purgeCacheBtn" style="display: inline-flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none; padding: 16px 32px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 12px rgba(220,38,38,0.3);">';
+print '<i class="fas fa-trash-alt"></i>';
+print '<span>Purgar Cache del FileManager</span>';
+print '</button>';
+print '</div>';
+
+print '<div id="purgeCacheStatus" style="margin-top: 16px; text-align: center; display: none;"></div>';
+
+print '</div>'; // Fin sección cache
+print '</div>'; // max-width container
+print '</div>'; // Cierre maintenanceContent
+
 ?>
 
 <!-- SweetAlert2 -->
@@ -2024,14 +2066,16 @@ if (typeof window.switchSetupTab === 'undefined') {
     window.history.pushState({}, '', url);
     
     // Obtener elementos
-    var configTab = document.getElementById("configTab");
-    var backupTab = document.getElementById("backupTab");
-    var logsTab = document.getElementById("logsTab");
-    var aboutTab = document.getElementById("aboutTab");
-    var configContent = document.getElementById("configContent");
-    var backupContent = document.getElementById("backupContent");
-    var logsContent = document.getElementById("logsContent");
-    var aboutContent = document.getElementById("aboutContent");
+        var configTab = document.getElementById("configTab");
+        var backupTab = document.getElementById("backupTab");
+        var logsTab = document.getElementById("logsTab");
+        var maintenanceTab = document.getElementById("maintenanceTab");
+        var aboutTab = document.getElementById("aboutTab");
+        var configContent = document.getElementById("configContent");
+        var backupContent = document.getElementById("backupContent");
+        var logsContent = document.getElementById("logsContent");
+        var maintenanceContent = document.getElementById("maintenanceContent");
+        var aboutContent = document.getElementById("aboutContent");
     
     
     // Verificar que existen los elementos
@@ -2049,10 +2093,11 @@ if (typeof window.switchSetupTab === 'undefined') {
     });
     
     // Hide all content
-    if (configContent) configContent.style.display = "none";
-    if (backupContent) backupContent.style.display = "none";
-    if (logsContent) logsContent.style.display = "none";
-    if (aboutContent) aboutContent.style.display = "none";
+        if (configContent) configContent.style.display = "none";
+        if (backupContent) backupContent.style.display = "none";
+        if (logsContent) logsContent.style.display = "none";
+        if (maintenanceContent) maintenanceContent.style.display = "none";
+        if (aboutContent) aboutContent.style.display = "none";
     
     // Show selected tab and content
     if (tabName === "config" && configTab && configContent) {
@@ -2063,15 +2108,19 @@ if (typeof window.switchSetupTab === 'undefined') {
         backupTab.classList.remove("inactive");
         backupTab.classList.add("active");
         backupContent.style.display = "block";
-    } else if (tabName === "logs" && logsTab && logsContent) {
-        logsTab.classList.remove("inactive");
-        logsTab.classList.add("active");
-        logsContent.style.display = "block";
-    } else if (tabName === "about" && aboutTab && aboutContent) {
-        aboutTab.classList.remove("inactive");
-        aboutTab.classList.add("active");
-        aboutContent.style.display = "block";
-    }
+        } else if (tabName === "logs" && logsTab && logsContent) {
+            logsTab.classList.remove("inactive");
+            logsTab.classList.add("active");
+            logsContent.style.display = "block";
+        } else if (tabName === "maintenance" && maintenanceTab && maintenanceContent) {
+            maintenanceTab.classList.remove("inactive");
+            maintenanceTab.classList.add("active");
+            maintenanceContent.style.display = "block";
+        } else if (tabName === "about" && aboutTab && aboutContent) {
+            aboutTab.classList.remove("inactive");
+            aboutTab.classList.add("active");
+            aboutContent.style.display = "block";
+        }
     
     return true;
     };
@@ -8385,6 +8434,55 @@ function stopSimulatorAutoRefresh() {
         clearInterval(simulatorAutoRefresh);
         simulatorAutoRefresh = null;
     }
+}
+
+// Función para purgar el cache del FileManager
+function purgeFileManagerCache() {
+    const btn = document.getElementById('purgeCacheBtn');
+    const statusDiv = document.getElementById('purgeCacheStatus');
+
+    if (!btn || !statusDiv) {
+        console.error('Elementos del botón de purga de cache no encontrados');
+        return;
+    }
+
+    // Deshabilitar botón y mostrar loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Purgando Cache...</span>';
+
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div style="color: #059669; font-weight: 500;"><i class="fas fa-circle-notch fa-spin"></i> Purgando cache del FileManager...</div>';
+
+    // Hacer la petición AJAX
+    fetch('action.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=purge_cache'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = '<div style="color: #059669; font-weight: 500;"><i class="fas fa-check-circle"></i> ' + (data.message || 'Cache purgado exitosamente') + '</div>';
+            // Recargar la página después de 2 segundos para aplicar los cambios
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            statusDiv.innerHTML = '<div style="color: #dc2626; font-weight: 500;"><i class="fas fa-exclamation-triangle"></i> Error: ' + (data.message || 'Error desconocido al purgar cache') + '</div>';
+            // Rehabilitar botón
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash-alt"></i><span>Purgar Cache del FileManager</span>';
+        }
+    })
+    .catch(error => {
+        console.error('Error al purgar cache:', error);
+        statusDiv.innerHTML = '<div style="color: #dc2626; font-weight: 500;"><i class="fas fa-exclamation-triangle"></i> Error de conexión al purgar cache</div>';
+        // Rehabilitar botón
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash-alt"></i><span>Purgar Cache del FileManager</span>';
+    });
 }
 
 </script>

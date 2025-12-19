@@ -253,6 +253,7 @@ SetupConfigError=Fehler beim Speichern der Konfiguration
 TabConfig=Konfiguration
 TabBackup=Sicherungen
 TabLogs=Protokolle
+TabMaintenance=Wartung
 
 # Stats
 StatsTitle=Statistiken

@@ -1236,7 +1236,67 @@ switch ($action) {
             returnJsonError('Error al eliminar los registros: ' . $db->lasterror());
         }
         break;
-        
+
+    case 'purge_cache':
+        // SEGURIDAD: Solo administradores pueden purgar cache
+        if (!$user->admin) {
+            returnJsonError('Acceso denegado: solo administradores', 403);
+        }
+
+        try {
+            $purged_items = [];
+
+            // 1. Limpiar cache de configuración estática
+            // Esto se hace invalidando las variables estáticas en filemanager.lib.php
+            // Nota: Las variables estáticas se limpiarán en el próximo request
+
+            // 2. Limpiar cache de tamaños de carpeta
+            $cache_file = __DIR__ . '/lib/cache/folder_sizes.json';
+            if (file_exists($cache_file)) {
+                if (unlink($cache_file)) {
+                    $purged_items[] = 'Cache de tamaños de carpeta';
+                } else {
+                    returnJsonError('Error al eliminar cache de tamaños de carpeta');
+                }
+            } else {
+                $purged_items[] = 'Cache de tamaños de carpeta (ya vacío)';
+            }
+
+            // 3. Limpiar cache de configuración optimizada
+            $optimized_cache = __DIR__ . '/cache/optimized_config.php';
+            if (file_exists($optimized_cache)) {
+                if (unlink($optimized_cache)) {
+                    $purged_items[] = 'Cache de configuración optimizada';
+                } else {
+                    returnJsonError('Error al eliminar cache de configuración optimizada');
+                }
+            } else {
+                $purged_items[] = 'Cache de configuración optimizada (ya vacío)';
+            }
+
+            // 4. Limpiar cache de traducciones si existe
+            $translations_cache = __DIR__ . '/lib/cache/translations.php';
+            if (file_exists($translations_cache)) {
+                if (unlink($translations_cache)) {
+                    $purged_items[] = 'Cache de traducciones';
+                } else {
+                    returnJsonError('Error al eliminar cache de traducciones');
+                }
+            }
+
+            // Log de la actividad
+            logFileManagerActivity('purge_cache', '', $user->id, 'Cache purgado: ' . implode(', ', $purged_items));
+
+            returnJsonSuccess('Cache del FileManager purgado exitosamente', [
+                'purged_items' => $purged_items,
+                'items_count' => count($purged_items)
+            ]);
+
+        } catch (Exception $e) {
+            returnJsonError('Error al purgar cache: ' . $e->getMessage());
+        }
+        break;
+
     default:
         returnJsonError('Acción no válida');
 }

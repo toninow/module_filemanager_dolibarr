@@ -35,3 +35,4 @@ config.php
 # Archivos de análisis y progreso
 analysis_progress.json
 backup_progress.json
+
