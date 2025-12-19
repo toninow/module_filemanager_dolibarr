@@ -67,4 +67,14 @@ scripts/update_analysis_progress.php
 # Archivos admin auxiliares
 admin/stats.php
 
+# Carpetas eliminadas por optimización
+backups/
+cache/
+class/
+deletedfiles/
+logs/
+Papelera/
+admin/backups/
+lib/cache/
+
 
