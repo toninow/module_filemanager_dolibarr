@@ -465,14 +465,27 @@ $finalZipFile = $zipFile; // Mismo archivo, no hay que renombrar
 $logFile = $backupDir . '/backup_' . $backupId . '.log';
 $progressFile = $backupDir . '/backup_progress_' . $backupId . '.json';
 
-// Función para log con soporte UTF-8
-function chunkLog($msg, $logFile) {
+// Función para log con soporte UTF-8 y niveles
+function chunkLog($msg, $logFile, $level = 'INFO') {
+    // Solo log básico: ERROR, WARN, INFO
+    // Omitir DEBUG para mejorar rendimiento
+    if ($level === 'DEBUG') {
+        return; // No escribir logs de debug
+    }
+
     $timestamp = date('[H:i:s]');
+    $levelPrefix = '';
+    switch ($level) {
+        case 'ERROR': $levelPrefix = '[ERROR] '; break;
+        case 'WARN': $levelPrefix = '[WARN] '; break;
+        case 'INFO': $levelPrefix = '[INFO] '; break;
+    }
+
     // Asegurar codificación UTF-8
     if (!mb_check_encoding($msg, 'UTF-8')) {
         $msg = mb_convert_encoding($msg, 'UTF-8', 'auto');
     }
-    @file_put_contents($logFile, "$timestamp $msg\n", FILE_APPEND | LOCK_EX);
+    @file_put_contents($logFile, "$timestamp $levelPrefix$msg\n", FILE_APPEND | LOCK_EX);
 }
 
 // Función para actualizar progreso
@@ -493,7 +506,7 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
         $testPath = @realpath($dolibarrRootFromToken);
         if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
             $dolibarrRoot = $testPath;
-            if ($logFile) chunkLog("✅ Root detectado (Método 1: Token): $dolibarrRoot", $logFile);
+            if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
             return $dolibarrRoot;
         }
         $methodsTried[] = "Token: " . ($testPath ?: 'no válido');
@@ -506,7 +519,7 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
             $testPath = @realpath($dolibarr_main_document_root);
             if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
                 $dolibarrRoot = $testPath;
-                if ($logFile) chunkLog("✅ Root detectado (Método 2: Global): $dolibarrRoot", $logFile);
+                if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                 return $dolibarrRoot;
             }
             $methodsTried[] = "Global: " . ($testPath ?: 'no válido');
@@ -518,7 +531,7 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
         $testPath = @realpath(DOL_DOCUMENT_ROOT);
         if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
             $dolibarrRoot = $testPath;
-            if ($logFile) chunkLog("✅ Root detectado (Método 3: Constante): $dolibarrRoot", $logFile);
+            if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
             return $dolibarrRoot;
         }
         $methodsTried[] = "Constante: " . ($testPath ?: 'no válido');
@@ -543,7 +556,7 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
                 $testPath = @realpath($possiblePath);
                 if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
                     $dolibarrRoot = $testPath;
-                    if ($logFile) chunkLog("✅ Root detectado (Método 4: Script path): $dolibarrRoot", $logFile);
+                    if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                     return $dolibarrRoot;
                 }
             }
@@ -560,13 +573,13 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
             // Probar el directorio actual
             if (@file_exists($currentDir . '/main.inc.php')) {
                 $dolibarrRoot = $currentDir;
-                if ($logFile) chunkLog("✅ Root detectado (Método 5: Recursivo nivel $level): $dolibarrRoot", $logFile);
+                if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                 return $dolibarrRoot;
             }
             // También probar subdirectorio htdocs si existe
             if (@is_dir($currentDir . '/htdocs') && @file_exists($currentDir . '/htdocs/main.inc.php')) {
                 $dolibarrRoot = $currentDir . '/htdocs';
-                if ($logFile) chunkLog("✅ Root detectado (Método 5: htdocs nivel $level): $dolibarrRoot", $logFile);
+                if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                 return $dolibarrRoot;
             }
             $currentDir = dirname($currentDir);
@@ -594,7 +607,7 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
                 $testPath = @realpath($commonPath);
                 if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
                     $dolibarrRoot = $testPath;
-                    if ($logFile) chunkLog("✅ Root detectado (Método 6: DOCUMENT_ROOT): $dolibarrRoot", $logFile);
+                    if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                     return $dolibarrRoot;
                 }
             }
@@ -612,12 +625,12 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
             while ($scriptDir && $scriptDir !== '/' && $level < $maxLevels) {
                 if (@file_exists($scriptDir . '/main.inc.php')) {
                     $dolibarrRoot = $scriptDir;
-                    if ($logFile) chunkLog("✅ Root detectado (Método 7: SCRIPT_FILENAME nivel $level): $dolibarrRoot", $logFile);
+                    if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                     return $dolibarrRoot;
                 }
                 if (@is_dir($scriptDir . '/htdocs') && @file_exists($scriptDir . '/htdocs/main.inc.php')) {
                     $dolibarrRoot = $scriptDir . '/htdocs';
-                    if ($logFile) chunkLog("✅ Root detectado (Método 7: SCRIPT_FILENAME/htdocs nivel $level): $dolibarrRoot", $logFile);
+                    if ($logFile) chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
                     return $dolibarrRoot;
                 }
                 $scriptDir = dirname($scriptDir);
@@ -627,21 +640,9 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
         }
     }
     
-    // Si no se encontró, log de todos los métodos intentados
+    // Si no se encontró, log conciso del error
     if (empty($dolibarrRoot) && $logFile) {
-        chunkLog("❌ ERROR: No se pudo detectar DOL_DOCUMENT_ROOT", $logFile);
-        chunkLog("   Métodos intentados:", $logFile);
-        foreach ($methodsTried as $method) {
-            chunkLog("     - $method", $logFile);
-        }
-        chunkLog("   __DIR__: " . __DIR__, $logFile);
-        chunkLog("   realpath(__DIR__): " . @realpath(__DIR__), $logFile);
-        if (isset($_SERVER['DOCUMENT_ROOT'])) {
-            chunkLog("   DOCUMENT_ROOT: " . $_SERVER['DOCUMENT_ROOT'], $logFile);
-        }
-        if (isset($_SERVER['SCRIPT_FILENAME'])) {
-            chunkLog("   SCRIPT_FILENAME: " . $_SERVER['SCRIPT_FILENAME'], $logFile);
-        }
+        chunkLog("No se pudo detectar DOL_DOCUMENT_ROOT automáticamente", $logFile, 'ERROR');
     }
     
     return $dolibarrRoot;
@@ -789,14 +790,7 @@ function logChunkPhysicalStatus($chunkInfo, $logFile) {
     $sizeStr = $exists ? number_format($size) . " bytes" : "N/A";
     $permsStr = $exists ? substr(sprintf('%o', fileperms($path)), -4) : "N/A";
 
-    chunkLog("         🔍 Chunk #$number ($filename): $status | Tamaño: $sizeStr | Permisos: $permsStr | R: " .
-             ($readable ? "✅" : "❌") . " | W: " . ($writable ? "✅" : "❌"), $logFile);
-
-    if (!$exists) {
-        chunkLog("            📁 Ruta buscada: $path", $logFile);
-        $dirExists = file_exists(dirname($path));
-        chunkLog("            📂 Directorio existe: " . ($dirExists ? "✅" : "❌"), $logFile);
-    }
+    // Debug logs removed for performance
 
     return ['exists' => $exists, 'size' => $size, 'readable' => $readable, 'writable' => $writable];
 }
@@ -830,27 +824,12 @@ if ($action === 'init' || $action === 'continue_listing') {
             $existingDirsPending = $existingState['dirs_pending'] ?? [];
             $existingScannedDirs = isset($existingState['scanned_dirs']) ? array_flip($existingState['scanned_dirs']) : [];
             
-            chunkLog("═══════════════════════════════════════════════════════════", $logFile);
-            chunkLog("🔄 CONTINUANDO LISTADO DE ARCHIVOS", $logFile);
-            chunkLog("   Backup ID: $backupId", $logFile);
-            chunkLog("   Archivos ya encontrados: " . number_format(count($existingFiles)), $logFile);
-            chunkLog("   Directorios pendientes: " . number_format(count($existingDirsPending)), $logFile);
-            chunkLog("═══════════════════════════════════════════════════════════", $logFile);
+            chunkLog("Continuando listado de archivos - Backup ID: $backupId", $logFile, 'INFO');
         }
     }
     
     if (!$continueListing) {
-    chunkLog("═══════════════════════════════════════════════════════════", $logFile);
-    chunkLog("🚀 INICIANDO BACKUP POR PARTES", $logFile);
-    chunkLog("   Backup ID: $backupId", $logFile);
-    chunkLog("   Tamaño de parte: $chunkSize archivos", $logFile);
-    chunkLog("   Dolibarr Root: $dolibarrRoot", $logFile);
-        $rootValid = (!empty($dolibarrRoot) && is_dir($dolibarrRoot) && file_exists($dolibarrRoot . '/main.inc.php'));
-        chunkLog("   Root válido: " . ($rootValid ? 'SÍ' : 'NO'), $logFile);
-        if ($rootValid) {
-            chunkLog("   Root path: $dolibarrRoot", $logFile);
-        }
-    chunkLog("═══════════════════════════════════════════════════════════", $logFile);
+        chunkLog("🚀 Iniciando backup por partes - ID: $backupId, Parte: $chunkSize archivos", $logFile, 'INFO');
     }
     
     // Verificar que la ruta es válida y tiene main.inc.php
@@ -873,22 +852,10 @@ if ($action === 'init' || $action === 'continue_listing') {
             if ($dolibarrRoot) {
                 $errorDetails .= " | main.inc.php existe: " . (@file_exists($dolibarrRoot . '/main.inc.php') ? 'SÍ' : 'NO');
             }
-            chunkLog("❌ ERROR: $errorMsg", $logFile);
-            chunkLog("   Detalles: $errorDetails", $logFile);
-            chunkLog("   __DIR__: " . __DIR__, $logFile);
-            chunkLog("   Script dir: " . @realpath(__DIR__), $logFile);
-            if (isset($_SERVER['DOCUMENT_ROOT'])) {
-                chunkLog("   DOCUMENT_ROOT: " . $_SERVER['DOCUMENT_ROOT'], $logFile);
-            }
-            if (isset($_SERVER['SCRIPT_FILENAME'])) {
-                chunkLog("   SCRIPT_FILENAME: " . $_SERVER['SCRIPT_FILENAME'], $logFile);
-            }
-            if (isset($_SERVER['HTTP_HOST'])) {
-                chunkLog("   HTTP_HOST: " . $_SERVER['HTTP_HOST'], $logFile);
-            }
+            chunkLog("ERROR: $errorMsg - $errorDetails", $logFile, 'ERROR');
             cleanOutputAndJson(['success' => false, 'error' => $errorMsg . ' (' . $errorDetails . ')']);
         } else {
-            chunkLog("✅ Root detectado correctamente en segundo intento: $dolibarrRoot", $logFile);
+            chunkLog("Root detectado correctamente", $logFile, 'DEBUG');
         }
     }
     
@@ -920,7 +887,7 @@ if ($action === 'init' || $action === 'continue_listing') {
         
         // Si el listado está incompleto, continuar desde donde quedó
         if ($existingState && isset($existingState['list_incomplete']) && $existingState['list_incomplete'] === true) {
-            chunkLog("📂 Continuando listado desde estado incompleto...", $logFile);
+            chunkLog("Continuando listado desde estado incompleto", $logFile, 'DEBUG');
             
             // IMPORTANTE: Cargar TODOS los archivos del archivo filelist (puede tener más archivos de listados anteriores)
             $filesListFile = $backupDir . '/filelist_' . $backupId . '.json';
