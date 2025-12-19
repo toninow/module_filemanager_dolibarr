@@ -36,3 +36,7 @@ config.php
 analysis_progress.json
 backup_progress.json
 
+# Archivo de logs de consola acumulados
+LOGS2BYTE.txt
+
+
