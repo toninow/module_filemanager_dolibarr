@@ -3847,7 +3847,7 @@ function proceedWithAnalysis(type) {
         const startProgressMonitoring = () => {
         if (progressMonitorInterval) {
             clearInterval(progressMonitorInterval);
-            console.log('🔵 [DEBUG] Intervalo anterior limpiado');
+            // Interval cleared - debug logs removed for performance
         }
         
         // Esperar un poco antes de la primera consulta para dar tiempo a que se limpie el progreso previo
@@ -3865,11 +3865,11 @@ function proceedWithAnalysis(type) {
                 // Actualizar UI incluso si no está corriendo todavía (para mostrar valores iniciales)
                 // Si no hay datos o el análisis no está corriendo y hay valores > 0, resetear a 0
                 if (data && data.success) {
-                    console.log('🔵 [DEBUG] Datos válidos - running:', data.running, 'total_files:', data.stats?.total_files);
+                    // Valid data received - debug logs removed for performance
                     // Si el análisis no está corriendo pero hay valores, podría ser datos antiguos
                     // En ese caso, solo actualizar si el análisis está corriendo o si los valores son 0
                     if (data.running || (!data.running && data.stats && data.stats.total_files === 0)) {
-                        console.log('🔵 [DEBUG] Actualizando UI con datos válidos');
+                        // UI updated with valid data - debug logs removed for performance
                         updateProgressUI(data);
                     } else {
                         // Datos antiguos, resetear a 0
@@ -3886,7 +3886,7 @@ function proceedWithAnalysis(type) {
                 }
             })
             .catch(error => {
-                console.error('❌ [DEBUG] Error en primera consulta:', error);
+                console.error('Error en primera consulta:', error);
             });
         }, 300); // Esperar 300ms para dar tiempo a la limpieza
         
@@ -3925,7 +3925,7 @@ function proceedWithAnalysis(type) {
                     } else {
                         // Mantener valores en 0 si son datos antiguos
                         if (pollCount === 1 || pollCount % 10 === 0) {
-                            console.log('🔵 [DEBUG] Manteniendo valores en 0 (datos antiguos ignorados)');
+                            // Keeping values at 0 (old data ignored) - debug logs removed for performance
                         }
                     }
                     
@@ -3971,7 +3971,7 @@ function proceedWithAnalysis(type) {
             })
             .catch(error => {
                 if (pollCount % 10 === 0) {
-                    console.error('❌ [DEBUG] Poll #' + pollCount + ' - Error:', error);
+                    console.error('Poll error:', error);
                 }
             });
         }, 100); // Actualizar cada 100ms (MUY frecuente para ver progreso en tiempo real)
@@ -4132,7 +4132,7 @@ function proceedWithAnalysis(type) {
         // Analyze response logs removed for performance
         if (!r.ok) {
             const text = await r.text();
-            console.error('❌ [DEBUG] Error HTTP en analyze_files.php:', r.status, text.substring(0, 200));
+            console.error('Error HTTP en analyze_files.php:', r.status, text.substring(0, 200));
             throw new Error('Error HTTP ' + r.status + ': ' + text.substring(0, 200));
         }
         const jsonData = await r.json();
@@ -4165,7 +4165,7 @@ function proceedWithAnalysis(type) {
                 // Analysis progress response logs removed for performance
                 if (!response.ok) {
                     return response.text().then(text => {
-                        console.error('❌ [DEBUG] Error HTTP:', response.status, text);
+                        console.error('Error HTTP:', response.status, text);
                         throw new Error('HTTP ' + response.status + ': ' + text);
                     });
                 }
@@ -4241,7 +4241,7 @@ function proceedWithAnalysis(type) {
                             }
                         })
                         .catch(error => {
-                            console.error('❌ [DEBUG] Error en continuación automática:', error);
+                            console.error('Error en continuación automática:', error);
                         });
                     }, 2000);
                 }
