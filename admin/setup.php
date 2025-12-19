@@ -3979,7 +3979,7 @@ function proceedWithAnalysis(type) {
         
         // Función para actualizar UI directamente con datos (sin depender del archivo)
         const updateProgressUIDirectly = (stats) => {
-            console.log('🔵 [DEBUG] updateProgressUIDirectly - files:', stats.total_files, 'folders:', stats.total_folders, 'size:', stats.total_size_mb);
+            // Progress UI updated - debug logs removed for performance
             const statFiles = document.getElementById('statFiles');
             const statFolders = document.getElementById('statFolders');
             const statSize = document.getElementById('statSize');
@@ -4145,18 +4145,12 @@ function proceedWithAnalysis(type) {
         // SI el análisis es parcial, ACTUALIZAR el archivo de progreso INMEDIATAMENTE con los datos recibidos
         // Y TAMBIÉN mostrar los datos directamente en el frontend (fallback si falla la escritura)
         if (data.success && data.partial && data.stats) {
-            console.log('🔵 [DEBUG] ========================================');
-            console.log('🔵 [DEBUG] Análisis parcial detectado, actualizando progreso...');
-        // Statistics data logs removed for performance
-            
-            // PRIMERO: Mostrar datos directamente en el frontend (inmediato)
-            console.log('🔵 [DEBUG] Mostrando datos directamente en el frontend (inmediato)...');
+            // Partial analysis progress update - debug logs removed for performance
             updateProgressUIDirectly(data.stats);
-            
+
             // SEGUNDO: Intentar actualizar el archivo (para el monitoreo)
             const updateProgressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/update_analysis_progress.php", 1); ?>';
-            console.log('🔵 [DEBUG] URL de actualización:', updateProgressUrl);
-            console.log('🔵 [DEBUG] Enviando datos:', 'files=' + (data.stats.total_files || 0) + '&folders=' + (data.stats.total_folders || 0) + '&size=' + (data.stats.total_size_mb || 0));
+            // Progress update URL and data logs removed for performance
             
             fetch(updateProgressUrl, {
                 method: 'POST',
@@ -4168,7 +4162,7 @@ function proceedWithAnalysis(type) {
                 body: 'token=<?php echo $token; ?>&files=' + (data.stats.total_files || 0) + '&folders=' + (data.stats.total_folders || 0) + '&size=' + (data.stats.total_size_mb || 0)
             })
             .then(response => {
-                console.log('🔵 [DEBUG] Respuesta de update_analysis_progress - Status:', response.status, 'OK:', response.ok);
+                // Analysis progress response logs removed for performance
                 if (!response.ok) {
                     return response.text().then(text => {
                         console.error('❌ [DEBUG] Error HTTP:', response.status, text);
@@ -4188,9 +4182,9 @@ function proceedWithAnalysis(type) {
             .catch(error => {
                 console.warn('⚠️ [DEBUG] Error actualizando archivo (pero datos ya mostrados en UI):', error);
             });
-            console.log('🔵 [DEBUG] ========================================');
+            // Analysis completion check - debug logs removed for performance
         } else {
-            console.log('🔵 [DEBUG] No es análisis parcial o no hay stats - success:', data.success, 'partial:', data.partial, 'has_stats:', !!data.stats);
+            // Non-partial analysis completion - debug logs removed for performance
         }
         
         // Si el análisis está completo (no parcial), mostrar el botón inmediatamente
@@ -4508,12 +4502,10 @@ function proceedWithAnalysis(type) {
 }
 
 function analyzeFiles() {
-    console.log('🔵 [DEBUG] ========================================');
-    console.log('🔵 [DEBUG] analyzeFiles() LLAMADO - Iniciando análisis de archivos');
-    console.log('🔵 [DEBUG] ========================================');
+        // Analysis started - debug logs removed for performance
     // Verificar si hay backup en ejecución antes de analizar
     checkBackupStatusBeforeStart('files_only', function() {
-        console.log('🔵 [DEBUG] checkBackupStatusBeforeStart completado, procediendo con análisis...');
+        // Backup status check completed - debug logs removed for performance
         // Callback cuando no hay backup en ejecución
         proceedWithAnalysis('files_only');
     });
@@ -4816,7 +4808,7 @@ async function startChunkedBackup() {
             console.log('🔍 [DEBUG] Código de respuesta HTTP:', res.status);
 
             const data = await res.json();
-            console.log('🔍 [DEBUG] Datos recibidos:', data);
+            // Log data received - debug logs removed for performance
 
             if (data.success && data.log) {
                 // SIEMPRE reemplazar con el log del servidor cuando esté disponible
@@ -5052,9 +5044,7 @@ async function startChunkedBackup() {
         // PASO 2: Procesar chunks con SISTEMA ADAPTATIVO
         let chunkNum = 0;
         let totalChunksCreated = 0;
-        console.log('🔍 [CHUNKS] Iniciando procesamiento de chunks...');
-        console.log('🔍 [CHUNKS] Total archivos a procesar:', totalFiles);
-        console.log('🔍 [CHUNKS] Tamaño inicial de chunk:', chunkSize);
+        // Chunk processing started - debug logs removed for performance
         
         // Limitar chunks para evitar loop infinito
         const maxChunks = Math.ceil(totalFiles / chunkSize) + 10; // +10 por seguridad
@@ -5062,7 +5052,7 @@ async function startChunkedBackup() {
 
         // VERIFICACIÓN DE CONECTIVIDAD ANTES DE EMPEZAR - FIX 2025-12-17 07:30
         // alert('🔥 DEBUG: Verificación de conectividad iniciada - FIX APLICADO');
-        console.log('🔍 [CHUNKS] Verificando conectividad con el servidor... FIX APLICADO');
+        // Server connectivity check - debug logs removed for performance
         try {
             const testUrl = chunkUrl + '?action=status&backup_id=' + backupId;
             console.log('🔍 [CHUNKS] URL de prueba:', testUrl);
@@ -5105,10 +5095,7 @@ async function startChunkedBackup() {
                 
                 try {
                     const fullUrl = chunkUrl + '?action=process&backup_id=' + backupId + '&chunk_number=' + chunkNum + '&chunk_size=' + chunkSize;
-                    console.log(`🔍 [CHUNKS] Chunk #${chunkNum} - Request (intento ${retryCount + 1}/${MAX_RETRIES})...`);
-                    console.log(`🔍 [CHUNKS] URL completa: ${fullUrl}`);
-                    console.log(`🔍 [CHUNKS] chunkUrl base: ${chunkUrl}`);
-                    console.log(`🔍 [CHUNKS] Parámetros: backup_id=${backupId}, chunk_number=${chunkNum}, chunk_size=${chunkSize}`);
+                    // Chunk request details - debug logs removed for performance
 
                     // SOLUCIÓN RADICAL: TIMEOUT CON SKIP DE CHUNK
 
@@ -5135,7 +5122,7 @@ async function startChunkedBackup() {
                     });
 
                     try {
-                        console.log(`🔍 [CHUNKS] Esperando respuesta de chunk #${chunkNum}...`);
+                        // Waiting for chunk response - debug logs removed for performance
                         processRes = await Promise.race([fetchPromise, timeoutPromise]);
                         fetchCompleted = true;
                         console.log(`✅ [CHUNKS] Chunk #${chunkNum} OK - Status: ${processRes.status}`);
@@ -5186,16 +5173,7 @@ async function startChunkedBackup() {
                         throw new Error('Respuesta inválida del servidor');
                     }
                     
-                    console.log(`🔍 [CHUNKS] Chunk #${chunkNum} - Datos recibidos:`, {
-                        success: processData.success,
-                        chunk_number: processData.chunk_number,
-                        processed: processData.processed,
-                        total: processData.total,
-                        is_complete: processData.is_complete,
-                        zip_size_mb: processData.zip_size_mb,
-                        chunk_zips: processData.chunk_zips ? processData.chunk_zips.length : 0,
-                        error: processData.error
-                    });
+                    // Chunk response data - debug logs removed for performance
                     
                     if (!processData.success) {
                         console.error(`❌ [CHUNKS] Chunk #${chunkNum} - Error del servidor:`, processData.error);
