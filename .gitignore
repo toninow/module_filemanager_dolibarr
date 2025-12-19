@@ -59,8 +59,6 @@ scripts/analyze_database.php
 scripts/cleanup_locks.php
 scripts/delete_backup.php
 scripts/download_backup.php
-scripts/get_analysis_progress.php
-scripts/update_analysis_progress.php
 
 # Scripts críticos mantenidos
 # scripts/cleanup_analysis_progress.php - MANTENIDO (necesario)
