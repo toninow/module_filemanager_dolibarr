@@ -1,0 +1,158 @@
+/* Estilos para el setup del FileManager */
+
+/* Pestañas */
+.tabs {
+    display: flex;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 20px;
+}
+
+.tab {
+    padding: 12px 24px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+    text-decoration: none;
+    color: #495057;
+    border-radius: 4px 4px 0 0;
+    margin-right: 5px;
+    transition: all 0.3s ease;
+}
+
+.tab:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+.tab.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Controles de logs */
+.log-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.log-controls .button {
+    margin-right: 10px;
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    transition: background 0.3s ease;
+}
+
+.log-controls .button:hover {
+    background: #5a6268;
+    color: white;
+}
+
+/* Contenedor de logs */
+.log-container {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.log-container table {
+    margin: 0;
+    font-size: 12px;
+}
+
+.log-container th {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.log-container td {
+    padding: 8px;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+/* Colores para acciones */
+.action-create_folder {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.action-upload {
+    color: #17a2b8;
+    font-weight: bold;
+}
+
+.action-move_to_trash {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.action-delete_permanent {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.action-restore {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.action-delete_blocked {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.action-delete_failed {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.action-delete_permanent_with_references {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Mensaje de info */
+.info {
+    padding: 20px;
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    color: #0c5460;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tabs {
+        flex-direction: column;
+    }
+    
+    .tab {
+        margin-right: 0;
+        margin-bottom: 5px;
+    }
+    
+    .log-container {
+        font-size: 11px;
+    }
+    
+    .log-container th,
+    .log-container td {
+        padding: 4px;
+    }
+}
+
+
+

@@ -1,0 +1,265 @@
+# FileManager language file - German
+# Copyright (C) 2024 Your Name or Company
+# This file is distributed under the same license as Dolibarr
+
+# Module info
+Module500100Name=FileManager Pro
+Module500100Desc=Erweitertes Dateimanagement und Backup-System für Dolibarr
+
+# Menu
+FileManager=Dateimanager
+FileManagerMenu=Dateimanager
+FileManagerSetup=FileManager Einstellungen
+FileManagerConfig=Konfiguration
+FileManagerBackup=Sicherungen
+FileManagerLogs=Aktivitätsprotokolle
+
+# Permissions
+Permission500100=Zugriff auf FileManager
+Permission500101=Dateien erstellen und bearbeiten
+Permission500102=Dateien löschen
+Permission500103=Sicherungen verwalten
+Permission500104=FileManager konfigurieren
+
+# Main interface
+FileManagerDesc=Datei- und Ordnerverwaltungssystem
+FileManagerHome=Startseite
+FileManagerCurrentPath=Aktueller Pfad
+FileManagerFiles=Dateien
+FileManagerFolders=Ordner
+FileManagerAll=Alle
+FileManagerRefresh=Aktualisieren
+FileManagerSearch=Suchen
+FileManagerSearchPlaceholder=Dateien und Ordner suchen...
+FileManagerFilter=Filtern
+FileManagerSort=Sortieren
+FileManagerNoResults=Keine Ergebnisse gefunden
+FileManagerLoading=Laden...
+
+# File properties
+FileManagerName=Name
+FileManagerDate=Datum
+FileManagerSize=Größe
+FileManagerType=Typ
+FileManagerActions=Aktionen
+FileManagerProperties=Eigenschaften
+FileManagerPermissions=Berechtigungen
+
+# Actions
+FileManagerView=Ansehen
+FileManagerViewFile=Datei ansehen
+FileManagerDownload=Herunterladen
+FileManagerDownloadFile=Datei herunterladen
+FileManagerDownloadZip=Als ZIP herunterladen
+FileManagerUpload=Hochladen
+FileManagerUploadFiles=Dateien hochladen
+FileManagerCreateFolder=Ordner erstellen
+FileManagerCreateNewFolder=Neuer Ordner
+FileManagerRename=Umbenennen
+FileManagerCopy=Kopieren
+FileManagerCut=Ausschneiden
+FileManagerPaste=Einfügen
+FileManagerMove=Verschieben
+FileManagerDelete=Löschen
+FileManagerDeleteFile=Datei löschen
+FileManagerDeleteFolder=Ordner löschen
+FileManagerDuplicate=Duplizieren
+FileManagerCompress=Komprimieren
+FileManagerExtract=Extrahieren
+FileManagerShare=Teilen
+
+# Trash
+FileManagerTrash=Papierkorb
+FileManagerTrashFolder=Papierkorb-Ordner
+FileManagerRecycleBin=Papierkorb
+FileManagerMoveToTrash=In Papierkorb verschieben
+FileManagerRestoreFromTrash=Aus Papierkorb wiederherstellen
+FileManagerEmptyTrash=Papierkorb leeren
+FileManagerPermanentlyDelete=Endgültig löschen
+
+# Confirmations
+FileManagerConfirm=Bestätigen
+FileManagerCancel=Abbrechen
+FileManagerSave=Speichern
+FileManagerClose=Schließen
+FileManagerYes=Ja
+FileManagerNo=Nein
+FileManagerDeleteConfirmation=Sind Sie sicher, dass Sie dieses Element löschen möchten?
+FileManagerDeletePermanentlyConfirmation=Sind Sie sicher, dass Sie dieses Element endgültig löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+FileManagerRestoreConfirmation=Sind Sie sicher, dass Sie dieses Element wiederherstellen möchten?
+FileManagerEmptyTrashConfirmation=Sind Sie sicher, dass Sie den Papierkorb leeren möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+
+# Messages
+FileManagerSuccess=Erfolg
+FileManagerError=Fehler
+FileManagerWarning=Warnung
+FileManagerInfo=Information
+FileManagerFileCreated=Datei erfolgreich erstellt
+FileManagerFolderCreated=Ordner erfolgreich erstellt
+FileManagerFileDeleted=Datei erfolgreich gelöscht
+FileManagerFolderDeleted=Ordner erfolgreich gelöscht
+FileManagerFileMoved=Datei erfolgreich verschoben
+FileManagerFolderMoved=Ordner erfolgreich verschoben
+FileManagerFileCopied=Datei erfolgreich kopiert
+FileManagerFolderCopied=Ordner erfolgreich kopiert
+FileManagerFileRenamed=Datei erfolgreich umbenannt
+FileManagerFolderRenamed=Ordner erfolgreich umbenannt
+FileManagerFileUploaded=Datei erfolgreich hochgeladen
+FileManagerFileDownloaded=Datei erfolgreich heruntergeladen
+FileManagerFileRestored=Datei erfolgreich wiederhergestellt
+FileManagerTrashEmptied=Papierkorb erfolgreich geleert
+
+# Errors
+FileManagerErrorGeneric=Ein Fehler ist aufgetreten
+FileManagerErrorPermission=Zugriff verweigert
+FileManagerErrorNotFound=Datei oder Ordner nicht gefunden
+FileManagerErrorAlreadyExists=Eine Datei oder ein Ordner mit diesem Namen existiert bereits
+FileManagerErrorInvalidName=Ungültiger Name
+FileManagerErrorUploadFailed=Hochladen fehlgeschlagen
+FileManagerErrorDownloadFailed=Herunterladen fehlgeschlagen
+FileManagerErrorDeleteFailed=Löschen fehlgeschlagen
+FileManagerErrorMoveFailed=Verschieben fehlgeschlagen
+FileManagerErrorCopyFailed=Kopieren fehlgeschlagen
+FileManagerErrorRenameFailed=Umbenennen fehlgeschlagen
+FileManagerErrorCreateFailed=Erstellen fehlgeschlagen
+
+# Sorting
+FileManagerSortByName=Nach Name sortieren
+FileManagerSortByDate=Nach Datum sortieren
+FileManagerSortBySize=Nach Größe sortieren
+FileManagerSortAscending=Aufsteigend
+FileManagerSortDescending=Absteigend
+
+# Filters
+FileManagerShowAll=Alle anzeigen
+FileManagerShowFolders=Nur Ordner
+FileManagerShowFiles=Nur Dateien
+FileManagerClearFilters=Filter löschen
+
+# Pagination
+FileManagerPage=Seite
+FileManagerOf=von
+FileManagerItems=Elemente
+FileManagerSelected=ausgewählt
+FileManagerSelectAll=Alle auswählen
+FileManagerDeselectAll=Auswahl aufheben
+FileManagerBack=Zurück
+FileManagerNext=Weiter
+FileManagerPrevious=Zurück
+FileManagerFirst=Erste
+FileManagerLast=Letzte
+
+# Backup system
+BackupSystem=Sicherungssystem
+BackupDatabase=Datenbank-Sicherung
+BackupDatabaseDesc=Alle SQL-Tabellen im komprimierten Format exportieren
+BackupFiles=Datei-Sicherung
+BackupFilesDesc=Alle Installationsdateien komprimieren
+BackupComplete=Vollständige Sicherung
+BackupCompleteDesc=Datenbank + Dateien in einem ZIP
+BackupAutomatic=Automatische Sicherung
+BackupAutomaticDesc=Automatische Sicherungen planen
+BackupManual=Manuelle Sicherung
+BackupHistory=Sicherungsverlauf
+BackupDownload=Sicherung herunterladen
+BackupDelete=Sicherung löschen
+BackupRestore=Sicherung wiederherstellen
+BackupProgress=Sicherungsfortschritt
+BackupCompleted=Sicherung abgeschlossen
+BackupFailed=Sicherung fehlgeschlagen
+BackupCancelled=Sicherung abgebrochen
+BackupInProgress=Sicherung läuft
+BackupStarting=Sicherung wird gestartet...
+BackupAnalyzing=Analysieren...
+BackupCompressing=Komprimieren...
+BackupFinalizing=Abschließen...
+BackupViewLogs=Protokolle anzeigen
+
+# Backup configuration
+BackupEnabled=Aktiviert
+BackupDisabled=Deaktiviert
+BackupFrequency=Häufigkeit
+BackupFrequencyDaily=Täglich
+BackupFrequencyWeekly=Wöchentlich
+BackupFrequencyMonthly=Monatlich
+BackupScheduleTime=Geplante Zeit
+BackupType=Sicherungstyp
+BackupLastBackup=Letzte Sicherung
+BackupNextBackup=Nächste Sicherung
+BackupNever=Nie
+BackupNotScheduled=Nicht geplant
+BackupSaveConfig=Konfiguration speichern
+
+# Backup logs
+BackupLogTitle=Sicherungsprotokoll
+BackupLogStarted=Sicherung gestartet
+BackupLogCompleted=Sicherung erfolgreich abgeschlossen
+BackupLogFailed=Sicherung fehlgeschlagen
+BackupLogCancelled=Sicherung vom Benutzer abgebrochen
+BackupLogProgress=Fortschritt: %s%%
+BackupLogProcessing=Verarbeitung: %s
+BackupLogCreatingZip=ZIP-Datei wird erstellt...
+BackupLogAddingFile=Datei wird hinzugefügt: %s
+BackupLogAddingTable=Tabelle wird hinzugefügt: %s
+BackupLogTableExported=Tabelle exportiert: %s (%s Zeilen)
+BackupLogFilesProcessed=Verarbeitete Dateien: %s von %s
+BackupLogFoldersProcessed=Verarbeitete Ordner: %s
+BackupLogSizeTotal=Gesamtgröße: %s
+BackupLogDuration=Dauer: %s
+BackupLogError=Fehler: %s
+BackupLogWarning=Warnung: %s
+BackupLogInfo=Info: %s
+BackupLogSkipped=Übersprungen: %s
+BackupLogFinished=Sicherung abgeschlossen um %s
+BackupLogSavedTo=Sicherung gespeichert unter: %s
+
+# Backup analysis
+BackupAnalysis=Sicherungsanalyse
+BackupAnalysisDatabase=Datenbankanalyse
+BackupAnalysisFiles=Dateianalyse
+BackupAnalysisComplete=Vollständige Analyse
+BackupAnalysisTables=Zu sichernde Tabellen
+BackupAnalysisRows=Gesamte Zeilen
+BackupAnalysisSize=Geschätzte Größe
+BackupAnalysisFiles=Zu sichernde Dateien
+BackupAnalysisFolders=Zu verarbeitende Ordner
+BackupAnalysisDuration=Geschätzte Dauer
+BackupAnalysisConfirm=Bestätigen und Sicherung starten
+BackupAnalysisCancel=Abbrechen
+
+# Backup status
+BackupStatusIdle=Inaktiv
+BackupStatusRunning=Läuft
+BackupStatusCompleted=Abgeschlossen
+BackupStatusFailed=Fehlgeschlagen
+BackupStatusCancelled=Abgebrochen
+BackupStatusWaiting=Wartend
+
+# Setup page
+SetupTitle=FileManager Konfiguration
+SetupGeneral=Allgemeine Einstellungen
+SetupBackup=Sicherungseinstellungen
+SetupSecurity=Sicherheitseinstellungen
+SetupRootPath=Stammverzeichnis
+SetupRootPathDesc=Basisverzeichnis für den Dateibrowser
+SetupProtectedFolders=Geschützte Ordner
+SetupProtectedFoldersDesc=Kommagetrennte Liste der geschützten Ordner
+SetupMaxUploadSize=Maximale Upload-Größe
+SetupMaxUploadSizeDesc=Maximale Dateigröße für Uploads (in Bytes)
+SetupConfigSaved=Konfiguration erfolgreich gespeichert
+SetupConfigError=Fehler beim Speichern der Konfiguration
+
+# Tab names
+TabConfig=Konfiguration
+TabBackup=Sicherungen
+TabLogs=Protokolle
+
+# Stats
+StatsTitle=Statistiken
+StatsTotalFiles=Dateien gesamt
+StatsTotalFolders=Ordner gesamt
+StatsTotalSize=Gesamtgröße
+StatsLastActivity=Letzte Aktivität
+
+
+

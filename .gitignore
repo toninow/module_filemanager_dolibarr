@@ -1,0 +1,37 @@
+# Archivos temporales y de sistema
+*.tmp
+*.temp
+*.log
+.DS_Store
+Thumbs.db
+
+# Directorios que no deben subirse al repositorio
+backups/
+cache/
+logs/
+deletedfiles/
+Papelera/
+admin/backups/
+
+# Archivos de configuración sensibles
+config.php
+
+# Archivos de desarrollo local
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de backup y temporales
+*.bak
+*.backup
+*.old
+
+# Paquetes y distribuciones
+*.zip
+*.tar.gz
+*.rar
+
+# Archivos de análisis y progreso
+analysis_progress.json
+backup_progress.json

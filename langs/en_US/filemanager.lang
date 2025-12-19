@@ -1,0 +1,274 @@
+# FileManager language file - English
+# Copyright (C) 2024 Your Name or Company
+# This file is distributed under the same license as Dolibarr
+
+# Module info
+Module500100Name=FileManager Pro
+Module500100Desc=Advanced file management and backup system for Dolibarr
+
+# Menu
+FileManager=File Manager
+FileManagerMenu=File Manager
+FileManagerSetup=FileManager Setup
+FileManagerConfig=Configuration
+FileManagerBackup=Backups
+FileManagerLogs=Activity Logs
+
+# Permissions
+Permission500100=Access FileManager
+Permission500101=Create and modify files
+Permission500102=Delete files
+Permission500103=Manage backups
+Permission500104=Configure FileManager
+
+# Main interface
+FileManagerDesc=File and folder management system
+FileManagerHome=Home
+FileManagerCurrentPath=Current path
+FileManagerFiles=Files
+FileManagerFolders=Folders
+FileManagerAll=All
+FileManagerRefresh=Refresh
+FileManagerSearch=Search
+FileManagerSearchPlaceholder=Search files and folders...
+FileManagerFilter=Filter
+FileManagerSort=Sort
+FileManagerNoResults=No results found
+FileManagerLoading=Loading...
+
+# File properties
+FileManagerName=Name
+FileManagerDate=Date
+FileManagerSize=Size
+FileManagerType=Type
+FileManagerActions=Actions
+FileManagerProperties=Properties
+FileManagerPermissions=Permissions
+
+# Actions
+FileManagerView=View
+FileManagerViewFile=View file
+FileManagerDownload=Download
+FileManagerDownloadFile=Download file
+FileManagerDownloadZip=Download as ZIP
+FileManagerUpload=Upload
+FileManagerUploadFiles=Upload files
+FileManagerCreateFolder=Create folder
+FileManagerCreateNewFolder=New folder
+FileManagerRename=Rename
+FileManagerCopy=Copy
+FileManagerCut=Cut
+FileManagerPaste=Paste
+FileManagerMove=Move
+FileManagerDelete=Delete
+FileManagerDeleteFile=Delete file
+FileManagerDeleteFolder=Delete folder
+FileManagerDuplicate=Duplicate
+FileManagerCompress=Compress
+FileManagerExtract=Extract
+FileManagerShare=Share
+
+# Trash
+FileManagerTrash=Trash
+FileManagerTrashFolder=Trash folder
+FileManagerRecycleBin=Recycle bin
+FileManagerMoveToTrash=Move to trash
+FileManagerRestoreFromTrash=Restore from trash
+FileManagerEmptyTrash=Empty trash
+FileManagerPermanentlyDelete=Permanently delete
+
+# Confirmations
+FileManagerConfirm=Confirm
+FileManagerCancel=Cancel
+FileManagerSave=Save
+FileManagerClose=Close
+FileManagerYes=Yes
+FileManagerNo=No
+FileManagerDeleteConfirmation=Are you sure you want to delete this item?
+FileManagerDeletePermanentlyConfirmation=Are you sure you want to permanently delete this item? This action cannot be undone.
+FileManagerRestoreConfirmation=Are you sure you want to restore this item?
+FileManagerEmptyTrashConfirmation=Are you sure you want to empty the trash? This action cannot be undone.
+
+# Messages
+FileManagerSuccess=Success
+FileManagerError=Error
+FileManagerWarning=Warning
+FileManagerInfo=Information
+FileManagerFileCreated=File created successfully
+FileManagerFolderCreated=Folder created successfully
+FileManagerFileDeleted=File deleted successfully
+FileManagerFolderDeleted=Folder deleted successfully
+FileManagerFileMoved=File moved successfully
+FileManagerFolderMoved=Folder moved successfully
+FileManagerFileCopied=File copied successfully
+FileManagerFolderCopied=Folder copied successfully
+FileManagerFileRenamed=File renamed successfully
+FileManagerFolderRenamed=Folder renamed successfully
+FileManagerFileUploaded=File uploaded successfully
+FileManagerFileDownloaded=File downloaded successfully
+FileManagerFileRestored=File restored successfully
+FileManagerTrashEmptied=Trash emptied successfully
+
+# Errors
+FileManagerErrorGeneric=An error occurred
+FileManagerErrorPermission=Permission denied
+FileManagerErrorNotFound=File or folder not found
+FileManagerErrorAlreadyExists=A file or folder with that name already exists
+FileManagerErrorInvalidName=Invalid name
+FileManagerErrorUploadFailed=Upload failed
+FileManagerErrorDownloadFailed=Download failed
+FileManagerErrorDeleteFailed=Delete failed
+FileManagerErrorMoveFailed=Move failed
+FileManagerErrorCopyFailed=Copy failed
+FileManagerErrorRenameFailed=Rename failed
+FileManagerErrorCreateFailed=Create failed
+
+# Sorting
+FileManagerSortByName=Sort by name
+FileManagerSortByDate=Sort by date
+FileManagerSortBySize=Sort by size
+FileManagerSortAscending=Ascending
+FileManagerSortDescending=Descending
+
+# Filters
+FileManagerShowAll=Show all
+FileManagerShowFolders=Folders only
+FileManagerShowFiles=Files only
+FileManagerClearFilters=Clear filters
+
+# Pagination
+FileManagerPage=Page
+FileManagerOf=of
+FileManagerItems=items
+FileManagerSelected=selected
+FileManagerSelectAll=Select all
+FileManagerDeselectAll=Deselect all
+FileManagerBack=Back
+FileManagerNext=Next
+FileManagerPrevious=Previous
+FileManagerFirst=First
+FileManagerLast=Last
+
+# Backup system
+BackupSystem=Backup System
+BackupDatabase=Database Backup
+BackupDatabaseDesc=Export all SQL tables in compressed format
+BackupFiles=Files Backup
+BackupFilesDesc=Compress all installation files
+BackupComplete=Complete Backup
+BackupCompleteDesc=Database + Files in one ZIP
+BackupAutomatic=Automatic Backup
+BackupAutomaticDesc=Schedule automatic backups
+BackupManual=Manual Backup
+BackupHistory=Backup History
+BackupDownload=Download Backup
+BackupDelete=Delete Backup
+BackupRestore=Restore Backup
+BackupProgress=Backup Progress
+BackupCompleted=Backup completed
+BackupFailed=Backup failed
+BackupCancelled=Backup cancelled
+BackupInProgress=Backup in progress
+BackupStarting=Starting backup...
+BackupAnalyzing=Analyzing...
+BackupCompressing=Compressing...
+BackupFinalizing=Finalizing...
+BackupViewLogs=View Logs
+
+# Backup configuration
+BackupEnabled=Enabled
+BackupDisabled=Disabled
+BackupFrequency=Frequency
+BackupFrequencyDaily=Daily
+BackupFrequencyWeekly=Weekly
+BackupFrequencyMonthly=Monthly
+BackupScheduleTime=Schedule time
+BackupType=Backup type
+BackupLastBackup=Last backup
+BackupNextBackup=Next backup
+BackupNever=Never
+BackupNotScheduled=Not scheduled
+BackupSaveConfig=Save configuration
+
+# Backup logs
+BackupLogTitle=Backup Log
+BackupLogStarted=Backup started
+BackupLogCompleted=Backup completed successfully
+BackupLogFailed=Backup failed
+BackupLogCancelled=Backup cancelled by user
+BackupLogProgress=Progress: %s%%
+BackupLogProcessing=Processing: %s
+BackupLogCreatingZip=Creating ZIP file...
+BackupLogAddingFile=Adding file: %s
+BackupLogAddingTable=Adding table: %s
+BackupLogTableExported=Table exported: %s (%s rows)
+BackupLogFilesProcessed=Files processed: %s of %s
+BackupLogFoldersProcessed=Folders processed: %s
+BackupLogSizeTotal=Total size: %s
+BackupLogDuration=Duration: %s
+BackupLogError=Error: %s
+BackupLogWarning=Warning: %s
+BackupLogInfo=Info: %s
+BackupLogSkipped=Skipped: %s
+BackupLogFinished=Backup finished at %s
+BackupLogSavedTo=Backup saved to: %s
+
+# Backup analysis
+BackupAnalysis=Backup Analysis
+BackupAnalysisDatabase=Database Analysis
+BackupAnalysisFiles=Files Analysis
+BackupAnalysisComplete=Complete Analysis
+BackupAnalysisTables=Tables to backup
+BackupAnalysisRows=Total rows
+BackupAnalysisSize=Estimated size
+BackupAnalysisFiles=Files to backup
+BackupAnalysisFolders=Folders to process
+BackupAnalysisDuration=Estimated duration
+BackupAnalysisConfirm=Confirm and Start Backup
+BackupAnalysisCancel=Cancel
+
+# Backup status
+BackupStatusIdle=Idle
+BackupStatusRunning=Running
+BackupStatusCompleted=Completed
+BackupStatusFailed=Failed
+BackupStatusCancelled=Cancelled
+BackupStatusWaiting=Waiting
+
+# Setup page
+SetupTitle=FileManager Configuration
+SetupGeneral=General Settings
+SetupBackup=Backup Settings
+SetupSecurity=Security Settings
+SetupRootPath=Root path
+SetupRootPathDesc=Base directory for file browser
+SetupProtectedFolders=Protected folders
+SetupProtectedFoldersDesc=Comma-separated list of protected folders
+SetupMaxUploadSize=Maximum upload size
+SetupMaxUploadSizeDesc=Maximum file size for uploads (in bytes)
+SetupConfigSaved=Configuration saved successfully
+SetupConfigError=Error saving configuration
+
+# Tab names
+TabConfig=Configuration
+TabBackup=Backups
+TabLogs=Logs
+
+# Stats
+StatsTitle=Statistics
+StatsTotalFiles=Total files
+StatsTotalFolders=Total folders
+StatsTotalSize=Total size
+StatsLastActivity=Last activity
+
+
+# Multiple selection
+select_all=Select all
+deselect_all=Deselect all
+selected=selected
+items_deleted=Items deleted
+items_cut=items cut
+items_copied=items copied
+delete_items_confirm=Delete {count} selected items?
+
+
