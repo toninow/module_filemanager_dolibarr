@@ -39,4 +39,32 @@ backup_progress.json
 # Archivo de logs de consola acumulados
 LOGS2BYTE.txt
 
+# Documentación eliminada por optimización
+README.md
+INSTALL.md
+CHANGELOG.md
+build_package.sh
+doc/
+
+# Idiomas adicionales eliminados (solo mantenemos ES/EN)
+langs/fr_FR/
+langs/de_DE/
+
+# Librerías auxiliares eliminadas
+lib/backup_translations.lib.php
+lib/usage_tracker.lib.php
+
+# Scripts auxiliares eliminados
+scripts/analyze_database.php
+scripts/cleanup_analysis_progress.php
+scripts/cleanup_locks.php
+scripts/delete_backup.php
+scripts/download_backup.php
+scripts/get_analysis_progress.php
+scripts/get_server_time.php
+scripts/update_analysis_progress.php
+
+# Archivos admin auxiliares
+admin/stats.php
+
 
