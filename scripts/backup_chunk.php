@@ -1489,9 +1489,29 @@ if ($action === 'process') {
     
     // ========== ENVOLVER TODO EL PROCESAMIENTO EN TRY-CATCH ==========
     try {
-    // Procesar chunk
-    $chunkStart = $processed;
-    $chunkEnd = min($processed + $chunkSize, $totalFiles);
+    // VERIFICAR SI HAY CHUNKS ADICIONALES PENDIENTES (GENERADOS POR TIMEOUT)
+    $processingAdditionalChunk = false;
+    if (!empty($state['additional_chunks'])) {
+        // Tomar el primer chunk adicional pendiente
+        $additionalChunk = array_shift($state['additional_chunks']);
+        $chunkStart = $additionalChunk['start_index'];
+        $chunkEnd = $additionalChunk['end_index'];
+        $chunkSize = $additionalChunk['chunk_size']; // Usar el chunkSize reducido
+
+        $processingAdditionalChunk = true;
+        chunkLog("🔄 Procesando chunk adicional generado por timeout (índices: {$chunkStart}-{$chunkEnd})", $logFile, 'INFO');
+
+        // Guardar el estado actualizado (sin este chunk adicional)
+        @file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+    } else {
+        // Procesar chunk normal
+        $chunkStart = $processed;
+        $chunkEnd = min($processed + $chunkSize, $totalFiles);
+    }
+
+    // Para chunks adicionales, necesitamos rastrear qué archivos ya fueron procesados
+    // para evitar procesar los mismos archivos múltiples veces
+    $alreadyProcessedFiles = $state['processed_files'] ?? [];
     $chunkProcessed = 0;
     $chunkBytes = 0;
     $errors = 0;
@@ -1602,6 +1622,12 @@ if ($action === 'process') {
         }
         
     for ($i = $chunkStart; $i < $chunkEnd; $i++) {
+            // PARA CHUNKS ADICIONALES: Verificar si este archivo ya fue procesado
+            if ($processingAdditionalChunk && isset($alreadyProcessedFiles[$i])) {
+                // Este archivo ya fue procesado, saltarlo
+                continue;
+            }
+
             // Verificar memoria cada 50 archivos en entorno restringido
             if ($isUltraRestricted && $filesProcessedInBatch % 50 == 0) {
                 $currentMemory = memory_get_usage(true);
@@ -1637,9 +1663,32 @@ if ($action === 'process') {
                         // NO HACER BREAK - continuar procesando hasta completar el chunk
                         chunkLog("📦 ChunkSize se reducirá en siguiente iteración para evitar futuros timeouts", $logFile);
                     } else {
-                        // CHUNK <80% COMPLETO: Pausar y reintentar más tarde
-                        chunkLog("⏱️ Tiempo límite alcanzado ({$maxProcessingTime}s) - Pausando en {$progressPercent}%", $logFile);
-                        chunkLog("   → Se reintentará este chunk en siguiente ejecución", $logFile);
+                        // CHUNK <80% COMPLETO: GENERAR CHUNKS ADICIONALES AUTOMÁTICAMENTE
+                        chunkLog("⏱️ Timeout detectado en {$progressPercent}% - Generando chunks adicionales", $logFile);
+
+                        // Calcular archivos restantes en este chunk
+                        $filesRemainingInChunk = $chunkEnd - $i;
+                        $newChunkSize = max(500, intval($chunkSize * 0.6)); // Reducir a 60% pero mínimo 500
+
+                        // Generar múltiples chunks del trabajo restante
+                        $additionalChunks = ceil($filesRemainingInChunk / $newChunkSize);
+                        chunkLog("📦 Generando {$additionalChunks} chunks adicionales (tamaño: {$newChunkSize})", $logFile);
+
+                        // Guardar información de chunks adicionales en el estado
+                        $state['additional_chunks'] = $state['additional_chunks'] ?? [];
+                        $state['additional_chunks'][] = [
+                            'start_index' => $i,
+                            'end_index' => $chunkEnd,
+                            'chunk_size' => $newChunkSize,
+                            'generated_at' => date('Y-m-d H:i:s'),
+                            'reason' => 'timeout_detection'
+                        ];
+
+                        @file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+                        chunkLog("💾 Chunks adicionales guardados en estado - Se procesarán en siguientes iteraciones", $logFile);
+
+                        // Detener este chunk aquí
+                        chunkLog("🛑 Deteniendo chunk actual para procesar chunks adicionales", $logFile);
                         break;
                     }
                 }
@@ -1696,6 +1745,11 @@ if ($action === 'process') {
         if ($addResult) {
             $chunkBytes += $fileSize;
             $chunkProcessed++;
+
+            // MARCAR ARCHIVO COMO PROCESADO EN ESTADO GLOBAL (para chunks adicionales)
+            if ($processingAdditionalChunk) {
+                $state['processed_files'][$i] = true;
+            }
             // Loggear archivos grandes para seguimiento
             if ($fileSize > 100 * 1024 * 1024) { // > 100MB
                 $sizeMB = round($fileSize / 1024 / 1024, 2);
