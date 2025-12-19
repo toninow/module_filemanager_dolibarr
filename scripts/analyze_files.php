@@ -602,6 +602,25 @@ try {
             error_log("ANALYZE_FILES: Lista de archivos guardada: $filesListFile (" . count($stats['all_files']) . " archivos)");
         }
 
+        // ADICIONAL: Guardar también en el formato esperado por backup_chunk.php (pre_analyzed_files.json)
+        // Esto asegura compatibilidad con el proceso de chunking
+        $preAnalyzedFile = $backupDir . '/pre_analyzed_files.json';
+        $preAnalyzedData = [
+            'files' => $stats['all_files'],
+            'total_files' => count($stats['all_files']),
+            'total_size_bytes' => $stats['total_size_bytes'],
+            'scanned_dirs' => $stats['scanned_dirs'] ?? 0,
+            'partial' => $stats['partial'] ?? false,
+            'error_reason' => $stats['error_reason'] ?? null,
+            'created_at' => date('Y-m-d H:i:s'),
+            'source' => 'analyze_files_complete',
+            'backup_id' => $backupId
+        ];
+
+        $preAnalyzedJson = json_encode($preAnalyzedData, JSON_PRETTY_PRINT);
+        file_put_contents($preAnalyzedFile, $preAnalyzedJson);
+        error_log("ANALYZE_FILES: Datos compatibles guardados en: $preAnalyzedFile (" . count($stats['all_files']) . " archivos)");
+
         // Agregar información del backup a la respuesta
         $response['backup_ready'] = true;
         $response['backup_id'] = $backupId;

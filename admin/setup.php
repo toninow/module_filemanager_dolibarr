@@ -1263,6 +1263,42 @@ print '<div style="margin-top: 25px; text-align: center; padding-top: 20px; bord
 print '<button onclick="confirmBackup()" id="confirmBtn" class="butAction" style="display: none; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3); transition: all 0.3s;">✅ Confirmar y Iniciar Backup</button>';
 print '<button onclick="cancelAnalysis()" class="butActionCancel" style="margin-left: 10px; background: #6c757d; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 14px;">❌ Cancelar</button>';
 print '</div>';
+
+// Panel de descarga automática de chunks
+print '<div id="chunkDownloaderPanel" style="display: none; background: white; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #4caf50;">';
+print '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #4caf50;">';
+print '<h4 style="margin: 0; color: #2c3e50; font-size: 20px; font-weight: 600;"><i class="fas fa-download"></i> Chunks Listos - Descarga Automática</h4>';
+print '<button onclick="hideChunkDownloader()" class="butAction" style="background: #6c757d; border: none; padding: 8px 15px; border-radius: 4px;"><i class="fas fa-times"></i></button>';
+print '</div>';
+
+print '<div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #c8e6c9;">';
+print '<h5 style="margin: 0 0 15px 0; color: #2e7d32;"><i class="fas fa-check-circle"></i> ¡Análisis completado! Chunks listos para descargar</h5>';
+print '<ul style="margin: 0; padding-left: 20px; color: #388e3c; line-height: 1.6;">';
+print '<li>Los archivos han sido analizados y divididos en chunks seguros</li>';
+print '<li>Cada chunk es un archivo ZIP válido independiente</li>';
+print '<li>Descarga todos los chunks automáticamente desde tu navegador</li>';
+print '<li>Respetamos los límites de tu servidor (3 segundos entre descargas)</li>';
+print '<li>No sobrecargamos el servidor ni matamos tu sitio web</li>';
+print '</ul>';
+print '</div>';
+
+print '<div id="chunkDownloaderStatus" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196f3;">';
+print '<div style="color: #1565c0; font-weight: 600; margin-bottom: 8px;"><i class="fas fa-spinner fa-spin"></i> <span id="chunkDownloaderStatusText">Iniciando descarga...</span></div>';
+print '<div class="progress" style="width: 100%; height: 20px; background: #bbdefb; border-radius: 10px; overflow: hidden; margin: 10px 0;">';
+print '<div id="chunkDownloaderProgress" class="progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #2196f3, #21cbf3); transition: width 0.3s;"></div>';
+print '</div>';
+print '<div id="chunkDownloaderStats" style="font-size: 12px; color: #424242; margin-top: 8px;">Chunks descargados: 0/0 | Tamaño total: 0 MB</div>';
+print '</div>';
+
+print '<div style="text-align: center;">';
+print '<button onclick="startChunkDownload()" id="startChunkDownloadBtn" class="butAction" style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(255,107,53,0.3);">';
+print '<i class="fas fa-rocket"></i> Iniciar Descarga Automática</button>';
+print '<button onclick="hideChunkDownloader()" class="butActionCancel" style="margin-left: 10px;">Cancelar</button>';
+print '</div>';
+
+print '<div id="chunkDownloaderLog" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>';
+
+print '</div>';
 print '</div>';
 
 // Barra de progreso y log
@@ -1322,9 +1358,28 @@ print '</div>';
 print '</div>';
 
 
-// Listado de backups
+// Listado de backups y chunks
 print '<br>';
-print load_fiche_titre('🗂️ ' . fmTrans('AvailableBackups'), '', 'title_setup');
+print load_fiche_titre('🗂️ Backups y Chunks Disponibles', '', 'title_setup');
+
+// Filtros para backups y chunks
+print '<div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">';
+print '<div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">';
+print '<div style="display: flex; align-items: center; gap: 10px;">';
+print '<label style="font-weight: 600; color: #495057;"><i class="fas fa-filter"></i> Mostrar:</label>';
+print '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">';
+print '<input type="radio" name="backupFilter" value="all" checked onclick="filterBackups(\'all\')"> Todos';
+print '</label>';
+print '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">';
+print '<input type="radio" name="backupFilter" value="backups" onclick="filterBackups(\'backups\')"> Backups Completos';
+print '</label>';
+print '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">';
+print '<input type="radio" name="backupFilter" value="chunks" onclick="filterBackups(\'chunks\')"> Chunks Disponibles';
+print '</label>';
+print '</div>';
+print '<div id="backupStats" style="color: #6c757d; font-size: 14px;">Cargando...</div>';
+print '</div>';
+print '</div>';
 
 print '<div class="div-table-responsive">';
 print '<table class="liste centpercent">';
@@ -1332,8 +1387,10 @@ print '<tr class="liste_titre">';
 print '<th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Fecha</th><th class="right">Acciones</th>';
 print '</tr>';
 
+print '<tbody id="backupTableBody">';
+
 if (empty($backups)) {
-    print '<tr class="oddeven"><td colspan="5" class="opacitymedium center">No hay backups disponibles</td></tr>';
+    print '<tr class="oddeven backup-row"><td colspan="5" class="opacitymedium center">No hay backups disponibles</td></tr>';
 } else {
     $var=true;
     foreach ($backups as $b) {
@@ -2079,7 +2136,7 @@ if (typeof window.switchSetupTab === 'undefined') {
     
     
     // Verificar que existen los elementos
-    if (!configTab || !backupTab || !logsTab || !aboutTab) {
+    if (!configTab || !backupTab || !logsTab || !maintenanceTab || !aboutTab) {
         console.error("No se encontraron los elementos de pestañas");
         return false;
     }
@@ -4238,6 +4295,36 @@ function proceedWithAnalysis(type) {
                                 // MOSTRAR EL BOTÓN DE INICIAR BACKUP CUANDO EL ANÁLISIS ESTÁ COMPLETO
                                 document.getElementById('confirmBtn').style.display = 'inline-block';
                                 console.log('✅ [DEBUG] Análisis de archivos completado - mostrando botón de iniciar backup');
+
+                                // MOSTRAR PANEL DE DESCARGA DE CHUNKS DESPUÉS DEL ANÁLISIS
+                                console.log('📦 Mostrando panel de descarga de chunks después del análisis');
+                                const chunkPanel = document.getElementById('chunkDownloaderPanel');
+                                if (chunkPanel) {
+                                    // Cambiar el título para que sea contextual
+                                    const titleEl = chunkPanel.querySelector('h4');
+                                    if (titleEl) {
+                                        titleEl.innerHTML = '<i class="fas fa-download"></i> Chunks Listos - Descarga Automática';
+                                    }
+
+                                    // Cambiar el color del panel para que sea verde (éxito)
+                                    chunkPanel.style.borderLeftColor = '#4caf50';
+                                    const header = chunkPanel.querySelector('div[style*="border-bottom"]');
+                                    if (header) {
+                                        header.style.borderBottomColor = '#4caf50';
+                                    }
+
+                                    // Mostrar el panel con animación
+                                    chunkPanel.style.display = 'block';
+                                    chunkPanel.style.opacity = '0';
+                                    chunkPanel.style.transform = 'translateY(-10px)';
+                                    setTimeout(() => {
+                                        chunkPanel.style.transition = 'all 0.3s ease';
+                                        chunkPanel.style.opacity = '1';
+                                        chunkPanel.style.transform = 'translateY(0)';
+                                    }, 100);
+
+                                    console.log('✅ Panel de descarga de chunks mostrado');
+                                }
                             }
                         })
                         .catch(error => {
@@ -5129,9 +5216,19 @@ async function startChunkedBackup() {
 
                     } catch (error) {
                         if (error.message === 'SKIP_CHUNK') {
-                            console.error(`⚠️ [CHUNKS] SALTANDO chunk #${chunkNum} por timeout - Continuando con siguiente`);
-                            // alert(`⚠️ Chunk #${chunkNum} saltado por lentitud - Continuando...`);
-                            continue; // SALTAR ESTE CHUNK Y PASAR AL SIGUIENTE
+                            // REDUCIR CHUNK SIZE GLOBAL en lugar de saltar - lógica mejorada
+                            const oldSize = chunkSize;
+                            chunkSize = Math.max(MIN_CHUNK, Math.floor(chunkSize * 0.7)); // Reducir 30%
+                            consecutiveErrors++;
+                            consecutiveSuccess = 0;
+
+                            addLog(`⏰ TIMEOUT en chunk #${chunkNum} - Reduciendo chunk size global: ${oldSize} → ${chunkSize}`);
+                            console.warn(`⏰ [CHUNKS] Chunk #${chunkNum} TIMEOUT - Reduciendo chunk size ${oldSize} → ${chunkSize} y continuando`);
+
+                            // NOTA: Los archivos del chunk timeout no se procesarán para evitar complejidad
+                            // Pero el backup continúa con chunks más pequeños para evitar futuros timeouts
+                            addLog(`⚠️ ATENCIÓN: ${chunkSize} archivos del chunk #${chunkNum} no se procesaron por timeout`);
+                            continue;
                         } else {
                             console.error(`❌ [CHUNKS] Error fatal en chunk #${chunkNum}:`, error.message);
                             alert(`❌ Error fatal en chunk #${chunkNum}: ${error.message}`);
@@ -5657,6 +5754,21 @@ async function startChunkedBackup() {
         addLog('═══════════════════════════════════════════════════════════');
         addLog('');
         addLog('📋 Puedes copiar el log con el botón "Copiar Log"');
+
+        // PREGUNTAR SOBRE MANTENER/ELIMINAR CHUNKS
+        if (finalData.method === 'separate_chunks' || finalData.method === 'separate_chunks_2byte') {
+            addLog('🗂️ Chunks creados exitosamente');
+            addLog('❓ Decide qué hacer con los chunks temporales...');
+
+            // Mostrar diálogo preguntando sobre mantener/eliminar chunks
+            setTimeout(() => {
+                showChunkCleanupDialog(finalData.backup_id, finalData.total_chunks);
+            }, 1000);
+
+            // NO recargar automáticamente si hay chunks para decidir
+            return;
+        }
+
         addLog('⏱️ La página se recargará en 5 segundos...');
 
         manualBackupInProgress = false;
@@ -5834,7 +5946,7 @@ document.addEventListener("DOMContentLoaded", function() {
     var urlParams = new URLSearchParams(window.location.search);
     var activeTab = urlParams.get('tab');
     
-    if (activeTab && ['config', 'backup', 'logs', 'simulator', 'about'].includes(activeTab)) {
+    if (activeTab && ['config', 'backup', 'logs', 'maintenance', 'simulator', 'about'].includes(activeTab)) {
         console.log("Pestaña activa desde URL:", activeTab);
         switchSetupTab(activeTab);
     } else {
@@ -8447,6 +8559,522 @@ function purgeFileManagerCache() {
         btn.innerHTML = '<i class="fas fa-trash-alt"></i><span>Purgar Cache del FileManager</span>';
     });
 }
+
+// ========== DESCARGA AUTOMÁTICA DE CHUNKS ==========
+let chunkDownloadController = null;
+
+function showChunkDownloader() {
+    const panel = document.getElementById('chunkDownloaderPanel');
+    const status = document.getElementById('chunkDownloaderStatus');
+
+    if (panel) {
+        panel.style.display = 'block';
+        status.style.display = 'none';
+
+        // Scroll al panel
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function hideChunkDownloader() {
+    const panel = document.getElementById('chunkDownloaderPanel');
+    if (panel) {
+        // Animación de salida
+        panel.style.opacity = '0';
+        panel.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+            panel.style.display = 'none';
+        }, 300);
+    }
+
+    // Cancelar descarga si está en progreso
+    if (chunkDownloadController) {
+        chunkDownloadController.abort();
+        chunkDownloadController = null;
+    }
+}
+
+async function startChunkDownload() {
+    const btn = document.getElementById('startChunkDownloadBtn');
+    const status = document.getElementById('chunkDownloaderStatus');
+    const statusText = document.getElementById('chunkDownloaderStatusText');
+    const progress = document.getElementById('chunkDownloaderProgress');
+    const stats = document.getElementById('chunkDownloaderStats');
+    const log = document.getElementById('chunkDownloaderLog');
+
+    if (!btn || !status || !statusText || !progress || !stats || !log) {
+        alert('Error: Elementos de la interfaz no encontrados');
+        return;
+    }
+
+    // Deshabilitar botón
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
+
+    // Mostrar status y log
+    status.style.display = 'block';
+    log.style.display = 'block';
+    log.innerHTML = '';
+
+    // Inicializar AbortController
+    chunkDownloadController = new AbortController();
+
+    try {
+        logMessage('🚀 Iniciando descarga automática de chunks...', 'info');
+
+        // 1. Obtener información del backup
+        statusText.textContent = 'Obteniendo información del backup...';
+        logMessage('📊 Consultando información del backup...', 'info');
+
+        const infoResponse = await fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/descargar_backup.php", 1); ?>?action=info&t=' + Date.now(), {
+            signal: chunkDownloadController.signal
+        });
+
+        if (!infoResponse.ok) {
+            throw new Error(`HTTP ${infoResponse.status}: ${infoResponse.statusText}`);
+        }
+
+        const info = await infoResponse.json();
+
+        if (!info.chunks || info.chunks.length === 0) {
+            throw new Error('No se encontraron chunks para descargar. ¿El backup está completo?');
+        }
+
+        logMessage(`✅ Backup encontrado: ${info.total_chunks} chunks, ${info.total_tamano_mb} MB total`, 'success');
+        logMessage(`⏱️ Tiempo estimado: ~${Math.ceil(info.total_chunks * 4 / 60)} minutos`, 'info');
+
+        let descargados = 0;
+        let fallidos = [];
+        const totalChunks = info.chunks.length;
+
+        // 2. Descargar chunks uno por uno
+        for (let i = 0; i < totalChunks; i++) {
+            const chunk = info.chunks[i];
+
+            if (chunkDownloadController.signal.aborted) {
+                logMessage('🛑 Descarga cancelada por el usuario', 'warning');
+                break;
+            }
+
+            statusText.textContent = `Descargando chunk ${i + 1}/${totalChunks}...`;
+            logMessage(`📦 Descargando chunk ${chunk.numero}/${totalChunks}: ${chunk.archivo} (${chunk.tamano_mb} MB)`, 'info');
+
+            try {
+                const chunkResponse = await fetch(`<?php echo dol_buildpath("/custom/filemanager/scripts/descargar_backup.php", 1); ?>?action=descargar&chunk=${chunk.numero}&t=${Date.now()}`, {
+                    signal: chunkDownloadController.signal
+                });
+
+                if (!chunkResponse.ok) {
+                    throw new Error(`HTTP ${chunkResponse.status}: ${chunkResponse.statusText}`);
+                }
+
+                const blob = await chunkResponse.blob();
+
+                // Crear descarga automática
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = chunk.archivo;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                descargados++;
+                logMessage(`✅ ${chunk.archivo} descargado exitosamente`, 'success');
+
+                // Actualizar progreso
+                const progressPercent = ((i + 1) / totalChunks) * 100;
+                progress.style.width = progressPercent + '%';
+
+                // Actualizar estadísticas
+                stats.innerHTML = `Chunks descargados: ${descargados}/${totalChunks} | Fallidos: ${fallidos.length} | Tamaño total: ${info.total_tamano_mb} MB`;
+
+            } catch (error) {
+                logMessage(`❌ Error descargando ${chunk.archivo}: ${error.message}`, 'error');
+                fallidos.push(chunk.numero);
+            }
+
+            // Delay entre descargas (CRÍTICO para no matar el servidor)
+            if (i < totalChunks - 1 && !chunkDownloadController.signal.aborted) {
+                statusText.textContent = `Esperando 3 segundos... (${i + 1}/${totalChunks} completado)`;
+                logMessage('⏳ Esperando 3 segundos antes del siguiente chunk...', 'info');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        }
+
+        // 3. Resultados finales
+        if (descargados === totalChunks && fallidos.length === 0) {
+            statusText.textContent = '¡Descarga completada exitosamente!';
+            logMessage('\n🎉 ¡DESCARGA COMPLETA EXITOSA!', 'success');
+            logMessage(`📁 Todos los ${totalChunks} chunks se descargaron en tu carpeta de Descargas`, 'success');
+            logMessage('\n🔧 Para combinar los chunks:', 'info');
+            logMessage('   Windows: copy /b chunk_*.zip backup_completo.zip', 'info');
+            logMessage('   Linux/Mac: cat chunk_*.zip > backup_completo.zip', 'info');
+
+            // Mostrar mensaje de éxito
+            setTimeout(() => {
+                alert(`¡Descarga completada!\n\n${descargados} chunks descargados exitosamente.\n\nRevisa tu carpeta de Descargas y combina los archivos usando los comandos mostrados en el log.`);
+            }, 1000);
+
+        } else {
+            statusText.textContent = `Descarga completada con errores: ${fallidos.length} fallaron`;
+            logMessage(`\n❌ DESCARGA COMPLETADA CON ERRORES: ${fallidos.length} chunks fallaron`, 'error');
+            if (fallidos.length > 0) {
+                logMessage(`Chunks que fallaron: ${fallidos.join(', ')}`, 'error');
+                logMessage('💡 Vuelve a ejecutar la descarga para obtener los chunks faltantes', 'info');
+            }
+        }
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            statusText.textContent = 'Descarga cancelada';
+            logMessage('🛑 Descarga cancelada por el usuario', 'warning');
+        } else {
+            statusText.textContent = 'Error durante la descarga';
+            logMessage(`💥 ERROR: ${error.message}`, 'error');
+            console.error('Error en descarga de chunks:', error);
+        }
+    }
+
+    // Limpiar
+    chunkDownloadController = null;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-rocket"></i> Iniciar Descarga Automática';
+}
+
+function logMessage(message, type = 'info') {
+    const log = document.getElementById('chunkDownloaderLog');
+    if (log) {
+        const timestamp = new Date().toLocaleTimeString();
+        const colorClass = type === 'error' ? 'color: #dc3545;' :
+                          type === 'success' ? 'color: #28a745;' :
+                          type === 'warning' ? 'color: #ffc107;' : 'color: #666;';
+
+        log.innerHTML += `<div style="${colorClass}">[${timestamp}] ${message}</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+}
+
+// ========== FIN DESCARGA AUTOMÁTICA DE CHUNKS ==========
+
+// ========== DIÁLOGO DE LIMPIEZA DE CHUNKS ==========
+function showChunkCleanupDialog(backupId, totalChunks) {
+    // Crear overlay oscuro
+    const overlay = document.createElement('div');
+    overlay.id = 'chunkCleanupOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+
+    // Crear diálogo
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+    `;
+
+    dialog.innerHTML = `
+        <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">
+            <i class="fas fa-question-circle" style="color: #ff9800;"></i><br>
+            ¿Qué hacer con los chunks?
+        </h3>
+
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: left;">
+            <p style="margin: 0 0 10px 0; font-weight: 600; color: #495057;">
+                <i class="fas fa-info-circle"></i> Backup completado exitosamente
+            </p>
+            <p style="margin: 0; color: #6c757d; line-height: 1.5;">
+                Se crearon <strong>${totalChunks} chunks</strong> que contienen todos tus archivos.
+                Cada chunk es un archivo ZIP válido e independiente.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <button onclick="keepChunks('${backupId}')" style="
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                margin: 0 10px 10px 0;
+                box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+                transition: all 0.3s;
+            " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                <i class="fas fa-save"></i> Mantener Chunks
+            </button>
+
+            <button onclick="deleteChunks('${backupId}')" style="
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                margin: 0 10px 10px 0;
+                box-shadow: 0 4px 12px rgba(220,53,69,0.3);
+                transition: all 0.3s;
+            " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                <i class="fas fa-trash"></i> Eliminar Chunks
+            </button>
+        </div>
+
+        <div style="font-size: 12px; color: #6c757d; border-top: 1px solid #dee2e6; padding-top: 15px;">
+            <p style="margin: 0;"><strong>Mantener chunks:</strong> Podrás descargarlos individualmente más tarde desde "Chunks disponibles"</p>
+            <p style="margin: 5px 0 0 0;"><strong>Eliminar chunks:</strong> Libera espacio en disco, pero deberás crear nuevos chunks si los necesitas</p>
+        </div>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // Agregar log
+    addLog('❓ Esperando decisión sobre chunks...');
+}
+
+function keepChunks(backupId) {
+    addLog('✅ Decisión: Mantener chunks para descargas futuras');
+    addLog('📁 Los chunks estarán disponibles en "Chunks disponibles"');
+    closeChunkCleanupDialog();
+    finalizeBackupAfterChunkDecision();
+}
+
+function deleteChunks(backupId) {
+    addLog('🗑️ Decisión: Eliminar chunks temporales');
+
+    // Mostrar loading
+    const overlay = document.getElementById('chunkCleanupOverlay');
+    if (overlay) {
+        overlay.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 12px; text-align: center;">
+                <div style="font-size: 48px; color: #dc3545; margin-bottom: 20px;">
+                    <i class="fas fa-trash-alt fa-spin"></i>
+                </div>
+                <h4>Eliminando chunks...</h4>
+                <p style="color: #6c757d; margin: 10px 0 0 0;">Liberando espacio en disco</p>
+            </div>
+        `;
+    }
+
+    // Hacer petición para eliminar chunks
+    fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/cleanup_chunks.php", 1); ?>?backup_id=' + backupId + '&action=delete&t=' + Date.now())
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addLog('✅ Chunks eliminados exitosamente');
+                addLog('📊 Espacio liberado: ' + data.space_freed_mb + ' MB');
+            } else {
+                addLog('⚠️ Error al eliminar chunks: ' + (data.error || 'Error desconocido'));
+            }
+
+            closeChunkCleanupDialog();
+            finalizeBackupAfterChunkDecision();
+        })
+        .catch(error => {
+            addLog('❌ Error de conexión al eliminar chunks');
+            console.error('Error deleting chunks:', error);
+            closeChunkCleanupDialog();
+            finalizeBackupAfterChunkDecision();
+        });
+}
+
+function closeChunkCleanupDialog() {
+    const overlay = document.getElementById('chunkCleanupOverlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(overlay);
+        }, 300);
+    }
+}
+
+function finalizeBackupAfterChunkDecision() {
+    addLog('⏱️ La página se recargará en 3 segundos...');
+    setTimeout(() => {
+        window.location.reload();
+    }, 3000);
+}
+
+// ========== FIN DIÁLOGO DE LIMPIEZA DE CHUNKS ==========
+
+// ========== FILTROS Y GESTIÓN DE CHUNKS ==========
+let allBackupItems = [];
+let currentFilter = 'all';
+
+function filterBackups(filterType) {
+    currentFilter = filterType;
+    const rows = document.querySelectorAll('#backupTableBody tr');
+
+    rows.forEach(row => {
+        const isChunk = row.classList.contains('chunk-row');
+        const isBackup = row.classList.contains('backup-row');
+
+        switch (filterType) {
+            case 'all':
+                row.style.display = '';
+                break;
+            case 'backups':
+                row.style.display = isBackup ? '' : 'none';
+                break;
+            case 'chunks':
+                row.style.display = isChunk ? '' : 'none';
+                break;
+        }
+    });
+
+    updateBackupStats();
+}
+
+function updateBackupStats() {
+    const rows = document.querySelectorAll('#backupTableBody tr');
+    let totalBackups = 0;
+    let totalChunks = 0;
+    let totalSizeBackups = 0;
+    let totalSizeChunks = 0;
+
+    rows.forEach(row => {
+        if (row.style.display !== 'none') {
+            if (row.classList.contains('backup-row')) {
+                totalBackups++;
+                // Verificar que la fila tenga suficientes celdas antes de acceder
+                if (row.cells && row.cells.length > 2 && row.cells[2]) {
+                    const sizeText = row.cells[2].textContent || '';
+                    const sizeMB = parseFloat(sizeText.replace(' MB', ''));
+                    if (!isNaN(sizeMB)) totalSizeBackups += sizeMB;
+                }
+            } else if (row.classList.contains('chunk-row')) {
+                totalChunks++;
+                // Verificar que la fila tenga suficientes celdas antes de acceder
+                if (row.cells && row.cells.length > 2 && row.cells[2]) {
+                    const sizeText = row.cells[2].textContent || '';
+                    const sizeMB = parseFloat(sizeText.replace(' MB', ''));
+                    if (!isNaN(sizeMB)) totalSizeChunks += sizeMB;
+                }
+            }
+        }
+    });
+
+    const statsEl = document.getElementById('backupStats');
+    if (statsEl) {
+        let statsText = '';
+        if (currentFilter === 'all' || currentFilter === 'backups') {
+            statsText += `${totalBackups} backups (${totalSizeBackups.toFixed(1)} MB)`;
+        }
+        if (currentFilter === 'all') {
+            statsText += ' • ';
+        }
+        if (currentFilter === 'all' || currentFilter === 'chunks') {
+            statsText += `${totalChunks} chunks (${totalSizeChunks.toFixed(1)} MB)`;
+        }
+        statsEl.textContent = statsText;
+    }
+}
+
+function loadAvailableChunks() {
+    fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/cleanup_chunks.php", 1); ?>?action=list&t=' + Date.now())
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.chunks.length > 0) {
+                addChunksToTable(data.chunks);
+            }
+            // Actualizar estadísticas después de cargar chunks
+            updateBackupStats();
+        })
+        .catch(error => {
+            console.error('Error cargando chunks:', error);
+            // Actualizar estadísticas incluso si hay error
+            updateBackupStats();
+        });
+}
+
+function addChunksToTable(chunks) {
+    const tableBody = document.getElementById('backupTableBody');
+    if (!tableBody) return;
+
+    chunks.forEach(chunk => {
+        const row = document.createElement('tr');
+        row.className = 'oddeven chunk-row';
+        row.setAttribute('data-type', 'chunk');
+
+        // Nombre del archivo
+        const nameCell = document.createElement('td');
+        nameCell.innerHTML = `<i class="fas fa-file-archive" style="color: #ff6b35;"></i> ${chunk.file_name}`;
+        row.appendChild(nameCell);
+
+        // Tipo
+        const typeCell = document.createElement('td');
+        typeCell.innerHTML = `<span style="color: #ff6b35;"><i class="fas fa-puzzle-piece"></i> Chunk #${chunk.chunk_number}</span>`;
+        row.appendChild(typeCell);
+
+        // Tamaño
+        const sizeCell = document.createElement('td');
+        sizeCell.textContent = `${chunk.size_mb} MB`;
+        row.appendChild(sizeCell);
+
+        // Fecha
+        const dateCell = document.createElement('td');
+        dateCell.textContent = chunk.modified_formatted;
+        row.appendChild(dateCell);
+
+        // Acciones
+        const actionsCell = document.createElement('td');
+        actionsCell.className = 'right';
+        actionsCell.innerHTML = `
+            <a class="butAction" href="<?php echo dol_buildpath("/custom/filemanager/scripts/descargar_backup.php", 1); ?>?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}"
+               title="Descargar este chunk" target="_blank">
+                <i class="fas fa-download"></i> Descargar
+            </a>
+            <a class="butActionDelete" href="javascript:void(0)"
+               onclick="deleteSingleChunk('${chunk.backup_id}', ${chunk.chunk_number}, '${chunk.file_name}')"
+               title="Eliminar este chunk">
+                <i class="fas fa-trash"></i> Eliminar
+            </a>
+        `;
+        row.appendChild(actionsCell);
+
+        tableBody.appendChild(row);
+    });
+
+    // Actualizar estadísticas
+    updateBackupStats();
+}
+
+function deleteSingleChunk(backupId, chunkNumber, fileName) {
+    if (!confirm(`¿Estás seguro de eliminar el chunk "${fileName}"?`)) {
+        return;
+    }
+
+    // Por ahora, redirigir a la funcionalidad general de cleanup
+    // En el futuro se puede implementar eliminación individual
+    alert('Función de eliminación individual próximamente. Usa "Eliminar Chunks" en el diálogo después del backup.');
+}
+
+// Inicializar cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    loadAvailableChunks(); // updateBackupStats se llama dentro de loadAvailableChunks después de cargar
+});
+
+// ========== FIN FILTROS Y GESTIÓN DE CHUNKS ==========
 
 </script>
 

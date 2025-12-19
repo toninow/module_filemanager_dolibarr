@@ -1,33 +1,14 @@
 <?php
 /**
- * BACKUP POR CHUNKS - Procesa un lote de archivos por request
- * 
- * ⚠️ IMPORTANTE: SOLO LECTURA - NO MODIFICA NADA DE DOLIBARR
- * - Solo LEE archivos para copiarlos al ZIP
- * - NO modifica, elimina ni mueve archivos originales
- * - NO afecta la base de datos
- * - NO bloquea Dolibarr
- * 
- * 📊 IMPACTO EN EL RENDIMIENTO DE DOLIBARR:
- * - El backup es SOLO LECTURA, por lo que NO afecta la integridad de los datos
- * - NO modifica archivos, por lo que NO hay riesgo de corrupción
- * - El procesamiento por chunks minimiza el uso de memoria y CPU
- * - Puede haber un impacto menor en I/O (lectura de disco) si Dolibarr está
- *   leyendo/escribiendo archivos al mismo tiempo, pero es mínimo debido a:
- *   • Chunks pequeños (500-1500 archivos por vez)
- *   • Pausas entre chunks (0.5 segundos)
- *   • Procesamiento secuencial (no paralelo)
- * - El impacto es similar a tener usuarios adicionales navegando por Dolibarr
- * - Se recomienda ejecutar backups en horarios de menor uso si es posible,
- *   pero NO es obligatorio - el sistema está diseñado para funcionar en uso normal
- * 
- * Funciona en CUALQUIER hosting porque cada request es corta e independiente.
- * JavaScript controla el loop y hace múltiples llamadas hasta completar.
- * 
+ * BACKUP POR CHUNKS - Procesa archivos en lotes para evitar timeouts
+ *
+ * ⚠️ SOLO LECTURA - NO modifica archivos originales ni base de datos
+ * Funciona en cualquier hosting con requests cortos e independientes.
+ *
  * Parámetros:
  * - action: 'init' | 'process' | 'finalize'
  * - backup_id: ID único del backup
- * - chunk_size: Cantidad de archivos por chunk (default: 300)
+ * - chunk_size: Cantidad de archivos por chunk
  */
 
 // Configuración de errores
@@ -776,25 +757,6 @@ function getZipErrorMessage($errorCode) {
     return $messages[$errorCode] ?? "Error desconocido ($errorCode)";
 }
 
-function logChunkPhysicalStatus($chunkInfo, $logFile) {
-    $path = $chunkInfo['path'];
-    $filename = $chunkInfo['file'];
-    $number = $chunkInfo['number'];
-
-    $exists = file_exists($path);
-    $size = $exists ? filesize($path) : 0;
-    $readable = $exists ? is_readable($path) : false;
-    $writable = $exists ? is_writable($path) : false;
-
-    $status = $exists ? "✅ EXISTE" : "❌ NO EXISTE";
-    $sizeStr = $exists ? number_format($size) . " bytes" : "N/A";
-    $permsStr = $exists ? substr(sprintf('%o', fileperms($path)), -4) : "N/A";
-
-    // Debug logs removed for performance
-
-    return ['exists' => $exists, 'size' => $size, 'readable' => $readable, 'writable' => $writable];
-}
-
 // ============================================================
 // ACCIÓN: INIT - Listar archivos y preparar
 // ============================================================
@@ -813,16 +775,12 @@ if ($action === 'init' || $action === 'continue_listing') {
     $filesListFile = $backupDir . '/filelist_' . $backupId . '.json';
     $continueListing = false;
     $existingFiles = [];
-    $existingDirsPending = [];
-    $existingScannedDirs = [];
     
     if ($action === 'continue_listing' && file_exists($stateFile)) {
         $existingState = @json_decode(@file_get_contents($stateFile), true);
         if ($existingState && isset($existingState['list_incomplete']) && $existingState['list_incomplete']) {
             $continueListing = true;
             $existingFiles = $existingState['files'] ?? [];
-            $existingDirsPending = $existingState['dirs_pending'] ?? [];
-            $existingScannedDirs = isset($existingState['scanned_dirs']) ? array_flip($existingState['scanned_dirs']) : [];
             
             chunkLog("Continuando listado de archivos - Backup ID: $backupId", $logFile, 'INFO');
         }
@@ -859,14 +817,7 @@ if ($action === 'init' || $action === 'continue_listing') {
         }
     }
     
-    // Detectar entorno para ajustar límites dinámicamente
-    $isLocalhost = (
-        isset($_SERVER['HTTP_HOST']) && 
-        ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1' || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
-    ) || (
-        isset($_SERVER['SERVER_ADDR']) && 
-        ($_SERVER['SERVER_ADDR'] === '127.0.0.1' || $_SERVER['SERVER_ADDR'] === '::1')
-    );
+    // Usar la detección de localhost ya realizada arriba
     
     // Límites dinámicos según entorno
     if ($isUltraRestricted) {
@@ -946,6 +897,20 @@ if ($action === 'init' || $action === 'continue_listing') {
         if (file_exists($preAnalyzedFile)) {
             chunkLog("📂 Buscando análisis previo dinámico...", $logFile);
             $preAnalyzedData = @json_decode(@file_get_contents($preAnalyzedFile), true);
+
+            // Validar que el JSON se decodificó correctamente
+            if ($preAnalyzedData === null) {
+                chunkLog("⚠️ Error decodificando análisis previo JSON", $logFile);
+                $preAnalyzedData = false;
+            } elseif (!is_array($preAnalyzedData)) {
+                chunkLog("⚠️ Análisis previo no es un array válido", $logFile);
+                $preAnalyzedData = false;
+            } elseif (!isset($preAnalyzedData['files']) || !is_array($preAnalyzedData['files'])) {
+                chunkLog("⚠️ Análisis previo no contiene archivos válidos", $logFile);
+                $preAnalyzedData = false;
+            } else {
+                chunkLog("   📊 Análisis previo válido: " . number_format(count($preAnalyzedData['files'])) . " archivos", $logFile);
+            }
             
             // Verificar si hay checkpoint de continuación
             $hasValidCheckpoint = false;
@@ -978,22 +943,46 @@ if ($action === 'init' || $action === 'continue_listing') {
                 chunkLog("✅ Análisis completo encontrado - usando lista existente", $logFile);
                 chunkLog("   📊 " . number_format(count($preAnalyzedData['files'])) . " archivos listos", $logFile);
 
-                $allFiles = $preAnalyzedData['files'];
+                // Extraer rutas de archivos del análisis previo (que vienen como objetos)
+                $allFiles = [];
+                foreach ($preAnalyzedData['files'] as $file) {
+                    if (is_array($file) && isset($file['path']) && !empty($file['path'])) {
+                        $allFiles[] = $file['path'];
+                    } elseif (is_string($file) && !empty($file)) {
+                        $allFiles[] = $file;
+                    }
+                    // Ignorar elementos inválidos
+                }
+                chunkLog("   📊 Archivos extraídos del análisis: " . number_format(count($allFiles)), $logFile);
                 $dirsToScan = []; // No scanear más
                 $scannedDirs = $preAnalyzedData['scanned_dirs'] ?? [];
                 $dirsProcessed = count($scannedDirs);
 
                 // Copiar a lista específica del backup
                 $filesListFile = $backupDir . '/filelist_' . $backupId . '.json';
-                @file_put_contents($filesListFile, json_encode($allFiles));
-                chunkLog("   💾 Lista copiada para este backup", $logFile);
+                $saved = @file_put_contents($filesListFile, json_encode($allFiles));
+                if ($saved !== false) {
+                    chunkLog("   💾 Lista copiada para este backup: " . number_format(count($allFiles)) . " archivos", $logFile);
+                } else {
+                    chunkLog("   ❌ Error guardando lista de archivos", $logFile);
+                }
 
             } elseif ($preAnalyzedData && isset($preAnalyzedData['files']) && $preAnalyzedData['partial']) {
                 // ANÁLISIS PARCIAL SIN CHECKPOINT - CONTINUAR ESCANEO DESDE ANÁLISIS PARCIAL
                 chunkLog("🔄 Análisis parcial encontrado - continuando escaneo dinámico...", $logFile);
                 chunkLog("   📊 Base: " . number_format(count($preAnalyzedData['files'])) . " archivos ya analizados", $logFile);
 
-                $allFiles = $preAnalyzedData['files'];
+                // Extraer rutas de archivos del análisis previo (que vienen como objetos)
+                $allFiles = [];
+                foreach ($preAnalyzedData['files'] as $file) {
+                    if (is_array($file) && isset($file['path']) && !empty($file['path'])) {
+                        $allFiles[] = $file['path'];
+                    } elseif (is_string($file) && !empty($file)) {
+                        $allFiles[] = $file;
+                    }
+                    // Ignorar elementos inválidos
+                }
+                chunkLog("   📊 Archivos base del análisis parcial: " . number_format(count($allFiles)), $logFile);
                 $dirsToScan = [$dolibarrRoot]; // Continuar desde raíz
                 $scannedDirs = $preAnalyzedData['scanned_dirs'] ?? [];
                 $dirsProcessed = count($scannedDirs);
@@ -1217,14 +1206,24 @@ if ($action === 'init' || $action === 'continue_listing') {
         }
         
         // Combinar archivos existentes con los nuevos (evitar duplicados)
-        $mergedFiles = array_unique(array_merge($existingFiles, $allFiles));
+        // Filtrar solo strings válidas antes del merge
+        $validExistingFiles = array_filter($existingFiles, function($file) {
+            return is_string($file) && !empty($file);
+        });
+        $validNewFiles = array_filter($allFiles, function($file) {
+            return is_string($file) && !empty($file);
+        });
+
+        $mergedFiles = array_unique(array_merge($validExistingFiles, $validNewFiles));
         $mergedTotalFiles = count($mergedFiles);
         @file_put_contents($filesListFile, json_encode(array_values($mergedFiles)));
-        
-        $newFilesCount = $mergedTotalFiles - count($existingFiles);
+
+        $newFilesCount = $mergedTotalFiles - count($validExistingFiles);
         chunkLog("📄 Lista parcial guardada: " . number_format($mergedTotalFiles) . " archivos totales", $logFile);
         if ($newFilesCount > 0) {
             chunkLog("   ➕ Archivos nuevos en este listado: " . number_format($newFilesCount), $logFile);
+        } elseif ($newFilesCount < 0) {
+            chunkLog("   ⚠️ Archivos perdidos en merge: " . number_format(abs($newFilesCount)), $logFile);
         }
         chunkLog("   Ruta: $filesListFile", $logFile);
         
@@ -1302,12 +1301,20 @@ if ($action === 'init' || $action === 'continue_listing') {
     }
     
     // Combinar archivos existentes con los nuevos (evitar duplicados)
-    $mergedFiles = array_unique(array_merge($existingFiles, $allFiles));
+    // Filtrar solo strings válidas antes del merge
+    $validExistingFiles = array_filter($existingFiles, function($file) {
+        return is_string($file) && !empty($file);
+    });
+    $validNewFiles = array_filter($allFiles, function($file) {
+        return is_string($file) && !empty($file);
+    });
+
+    $mergedFiles = array_unique(array_merge($validExistingFiles, $validNewFiles));
     @file_put_contents($filesListFile, json_encode(array_values($mergedFiles)));
-    
+
     $finalTotal = count($mergedFiles);
-    if (count($existingFiles) > 0) {
-        $newFilesCount = $finalTotal - count($existingFiles);
+    if (count($validExistingFiles) > 0) {
+        $newFilesCount = $finalTotal - count($validExistingFiles);
         chunkLog("📄 Lista de archivos actualizada: " . number_format($finalTotal) . " archivos totales", $logFile);
         chunkLog("   ➕ Archivos nuevos agregados: " . number_format($newFilesCount), $logFile);
     } else {
@@ -1387,15 +1394,19 @@ if ($action === 'process') {
     // Cargar lista de archivos desde archivo separado
     $filesListFile = $backupDir . '/filelist_' . $backupId . '.json';
     if (!file_exists($filesListFile)) {
+        chunkLog("❌ Lista de archivos no encontrada: $filesListFile", $logFile);
         cleanupBackupFilesOnError($backupId, $backupDir);
         cleanOutputAndJson(['success' => false, 'error' => 'Lista de archivos no encontrada'], $backupId, $backupDir);
     }
-    
+
     $allFiles = @json_decode(@file_get_contents($filesListFile), true);
     if (!$allFiles || !is_array($allFiles)) {
+        chunkLog("❌ Lista de archivos corrupta o vacía", $logFile);
         cleanupBackupFilesOnError($backupId, $backupDir);
         cleanOutputAndJson(['success' => false, 'error' => 'Lista de archivos corrupta'], $backupId, $backupDir);
     }
+
+    chunkLog("📂 Lista de archivos cargada: " . number_format(count($allFiles)) . " archivos", $logFile);
     
     // ========== NO EXCLUIR ARCHIVOS - PROCESAR TODOS ==========
     // Todos los archivos se incluyen en el backup, sin importar su tamaño
@@ -1705,8 +1716,16 @@ if ($action === 'process') {
             // La verificación dentro del loop cada checkInterval es suficiente
             
         $filePath = $allFiles[$i];
+
+        // Validar que el elemento sea una ruta válida
+        if (!is_string($filePath) || empty($filePath)) {
+            chunkLog("⚠️ Elemento inválido en posición {$i}: " . gettype($filePath) . " - omitiendo", $logFile);
+            $chunkProcessed++; // Contar como procesado para no bloquear el progreso
+            continue;
+        }
+
         $fileName = basename($filePath);
-        
+
         // ========== VERIFICAR EXCLUSIONES POR TAMAÑO/PATRÓN ==========
         // Excluir archivos muy grandes que causan timeout (ZIPs > 500MB, backups antiguos, etc.)
         if (shouldExcludeFile($filePath, $excludeFiles, $excludePatterns, $excludePathPatterns)) {
@@ -1895,8 +1914,24 @@ if ($action === 'process') {
     chunkLog("   → Tiempo de cierre: {$closeTime}s", $logFile);
     chunkLog("   → Ruta esperada: $chunkZipFile", $logFile);
 
-    // Verificar existencia del archivo
-    if (file_exists($chunkZipFile)) {
+    // Verificar existencia del archivo - CRÍTICO para evitar chunks fantasma
+    if (!file_exists($chunkZipFile)) {
+        chunkLog("   ❌ ERROR CRÍTICO: ZIP no se creó físicamente", $logFile);
+        chunkLog("   → close() retornó SUCCESS pero el archivo no existe", $logFile);
+        $closeResult = false; // Forzar error para manejar como fallo
+
+        // Verificar permisos del directorio
+        $dirPerms = is_writable(dirname($chunkZipFile)) ? "escribible" : "no escribible";
+        chunkLog("   → Directorio $dirPerms: " . dirname($chunkZipFile), $logFile);
+
+        // Listar archivos en el directorio para ver qué hay
+        $dirFiles = scandir(dirname($chunkZipFile));
+        $zipFiles = array_filter($dirFiles, function($f) { return pathinfo($f, PATHINFO_EXTENSION) === 'zip'; });
+        chunkLog("   → Archivos ZIP en directorio: " . count($zipFiles), $logFile);
+        if (!empty($zipFiles)) {
+            chunkLog("   → Lista: " . implode(', ', array_slice($zipFiles, 0, 5)), $logFile);
+        }
+    } else {
         chunkLog("   ✅ Archivo existe físicamente", $logFile);
         $chunkZipSize = @filesize($chunkZipFile);
         $chunkZipSizeMB = round($chunkZipSize / 1024 / 1024, 2);
@@ -1925,20 +1960,6 @@ if ($action === 'process') {
             }
         } else {
             chunkLog("   ❌ Archivo está vacío (0 bytes)", $logFile);
-        }
-    } else {
-        chunkLog("   ❌ ARCHIVO NO EXISTE después del cierre", $logFile);
-
-        // Verificar permisos del directorio
-        $dirPerms = is_writable(dirname($chunkZipFile)) ? "escribible" : "no escribible";
-        chunkLog("   → Directorio $dirPerms: " . dirname($chunkZipFile), $logFile);
-
-        // Listar archivos en el directorio para ver qué hay
-        $dirFiles = scandir(dirname($chunkZipFile));
-        $zipFiles = array_filter($dirFiles, function($f) { return pathinfo($f, PATHINFO_EXTENSION) === 'zip'; });
-        chunkLog("   → Archivos ZIP en directorio: " . count($zipFiles), $logFile);
-        if (!empty($zipFiles)) {
-            chunkLog("   → Lista: " . implode(', ', array_slice($zipFiles, 0, 5)), $logFile);
         }
     }
 
@@ -1972,19 +1993,40 @@ if ($action === 'process') {
     
     // Calcular tiempo del chunk ANTES de usarlo
     $chunkTime = round(microtime(true) - $startTime, 2);
-    
-    // Guardar información del chunk ZIP en el estado
-    $state['chunk_zips'][] = [
-        'number' => $chunkNumber,
-        'file' => basename($chunkZipFile),
-        'size' => $chunkZipSize,
-        'files' => $chunkProcessed,
-        'bytes' => $chunkBytes,
-        'time' => $chunkTime
-    ];
-    
-    chunkLog("✅ ZIP de parte #$chunkNumber creado: " . basename($chunkZipFile), $logFile);
-    chunkLog("📦 Tamaño: {$chunkZipSizeMB} MB | Archivos: $chunkProcessed", $logFile);
+
+    // Solo guardar chunk si se creó correctamente
+    $chunkCreatedSuccessfully = $closeResult && file_exists($chunkZipFile) && $chunkZipSize > 0;
+
+    if ($chunkCreatedSuccessfully) {
+        // Guardar información del chunk ZIP en el estado
+        $state['chunk_zips'][] = [
+            'number' => $chunkNumber,
+            'file' => basename($chunkZipFile),
+            'size' => $chunkZipSize,
+            'files' => $chunkProcessed,
+            'bytes' => $chunkBytes,
+            'time' => $chunkTime
+        ];
+
+        chunkLog("✅ ZIP de parte #$chunkNumber creado: " . basename($chunkZipFile), $logFile);
+        chunkLog("📦 Tamaño: {$chunkZipSizeMB} MB | Archivos: $chunkProcessed", $logFile);
+    } else {
+        chunkLog("❌ ERROR CRÍTICO: Chunk #$chunkNumber no se pudo crear correctamente", $logFile);
+        chunkLog("   → closeResult: " . ($closeResult ? "true" : "false"), $logFile);
+        chunkLog("   → archivo existe: " . (file_exists($chunkZipFile) ? "sí" : "no"), $logFile);
+        chunkLog("   → tamaño: {$chunkZipSize} bytes", $logFile);
+
+        // Limpiar archivos temporales que pudieron quedar
+        if (file_exists($chunkZipFile)) {
+            @unlink($chunkZipFile);
+            chunkLog("   → Archivo temporal eliminado", $logFile);
+        }
+
+        // Cleanup y error
+        cleanupBackupFilesOnError($backupId, $backupDir);
+        ob_clean();
+        cleanOutputAndJson(['success' => false, 'error' => "Error al crear chunk #$chunkNumber"], $backupId, $backupDir);
+    }
     
     // Limpiar archivos temporales del ZIP del chunk que pudieron quedar
     $tempFiles = glob($chunkZipFile . '.*');
