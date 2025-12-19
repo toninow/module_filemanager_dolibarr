@@ -52,7 +52,7 @@ require_once '../../main.inc.php';
 require_once 'lib/filemanager.lib.php';
 
 // Verificar token CSRF (permitir GET o POST, excepto para previews)
-$token = $_GET['token'] ?? $_POST['token'] ?? '';
+$token = $_GET['token'] ?? $_POST['token'] ?? $_GET['FILEMANAGER_TOKEN'] ?? $_POST['FILEMANAGER_TOKEN'] ?? '';
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // No requerir token para previews (pero validar ruta)

@@ -8454,12 +8454,12 @@ function purgeFileManagerCache() {
     statusDiv.innerHTML = '<div style="color: #059669; font-weight: 500;"><i class="fas fa-circle-notch fa-spin"></i> Purgando cache del FileManager...</div>';
 
     // Hacer la petición AJAX
-    fetch('action.php', {
+    fetch('<?php echo dol_buildpath('/custom/filemanager/action.php', 1); ?>', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'action=purge_cache'
+        body: 'action=purge_cache&FILEMANAGER_TOKEN=<?php echo $_SESSION['newtoken']; ?>'
     })
     .then(response => response.json())
     .then(data => {
