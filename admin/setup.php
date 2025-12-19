@@ -2414,7 +2414,7 @@ function proceedWithBackup(type, resumeId) {
         console.log('DEBUG: 🔄 REANUDANDO backup tipo:', type, 'con ID:', resumeId);
         window.resumeBackupId = resumeId;
     } else {
-        console.log('DEBUG: Procediendo con backup tipo:', type);
+        // Backup proceeding logs removed for performance
     }
     
     // MARCAR QUE HAY UN BACKUP MANUAL EN PROGRESO
@@ -2522,7 +2522,7 @@ function proceedWithBackup(type, resumeId) {
     // Generar ID de backup (o usar el ID de reanudación si existe)
     if (window.resumeBackupId) {
         currentBackupId = window.resumeBackupId;
-        console.log('DEBUG: 🔄 REANUDANDO con Backup ID:', currentBackupId);
+        // Backup resume logs removed for performance
         window.resumeBackupId = null; // Limpiar para próximos backups
     } else {
         currentBackupId = new Date().toISOString().replace(/[-:T]/g, '').substring(0, 14);
@@ -2657,7 +2657,7 @@ function proceedWithBackup(type, resumeId) {
         }
     })
     .then(response => {
-        console.log('DEBUG: Backup fetch response status:', response.status);
+        // HTTP response logs removed for performance
         if (!response.ok) {
             throw new Error('HTTP error! status: ' + response.status);
         }
@@ -3782,21 +3782,9 @@ function proceedWithAnalysis(type) {
     const statFiles = document.getElementById('statFiles');
     const statFolders = document.getElementById('statFolders');
     const statSize = document.getElementById('statSize');
-    if (statFiles) {
-        console.log('🔵 [DEBUG] statFiles antes:', statFiles.textContent);
-        statFiles.textContent = '0';
-        console.log('🔵 [DEBUG] statFiles después: 0');
-    }
-    if (statFolders) {
-        console.log('🔵 [DEBUG] statFolders antes:', statFolders.textContent);
-        statFolders.textContent = '0';
-        console.log('🔵 [DEBUG] statFolders después: 0');
-    }
-    if (statSize) {
-        console.log('🔵 [DEBUG] statSize antes:', statSize.textContent);
-        statSize.textContent = '0 B';
-        console.log('🔵 [DEBUG] statSize después: 0 B');
-    }
+    if (statFiles) statFiles.textContent = '0';
+    if (statFolders) statFolders.textContent = '0';
+    if (statSize) statSize.textContent = '0 B';
     
     // Ocultar botón de confirmación hasta que termine
     document.getElementById('confirmBtn').style.display = 'none';
@@ -3894,7 +3882,7 @@ function proceedWithAnalysis(type) {
                         if (statSize) statSize.textContent = '0 B';
                     }
                 } else {
-                    console.log('🔵 [DEBUG] No hay datos válidos aún, esperando...');
+                    // Waiting for data logs removed for performance
                 }
             })
             .catch(error => {
@@ -3978,7 +3966,7 @@ function proceedWithAnalysis(type) {
                         progressMonitorInterval = null;
                     }
                 } else if (pollCount % 10 === 0) {
-                    console.log('🔵 [DEBUG] Poll #' + pollCount + ' - No hay datos aún');
+                    // Debug logs removed for performance
                 }
             })
             .catch(error => {
@@ -4000,15 +3988,12 @@ function proceedWithAnalysis(type) {
             
             if (statFiles && stats.total_files !== undefined) {
                 statFiles.textContent = stats.total_files.toLocaleString();
-                console.log('✅ [DEBUG] statFiles actualizado a:', stats.total_files);
             }
             if (statFolders && stats.total_folders !== undefined) {
                 statFolders.textContent = stats.total_folders.toLocaleString();
-                console.log('✅ [DEBUG] statFolders actualizado a:', stats.total_folders);
             }
             if (statSize && stats.total_size_mb !== undefined) {
                 statSize.textContent = formatFileSize(stats.total_size_mb);
-                console.log('✅ [DEBUG] statSize actualizado a:', formatFileSize(stats.total_size_mb));
             }
             if (currentPathEl) {
                 currentPathEl.textContent = '✓ Análisis en progreso...';
@@ -4133,7 +4118,7 @@ function proceedWithAnalysis(type) {
         };
         
         // Iniciar monitoreo DESPUÉS de iniciar el análisis (esperar 500ms para que el análisis cree el archivo)
-        console.log('🔵 [DEBUG] Paso 4: Iniciando fetch a analyze_files.php...');
+        // Analysis step logs removed for performance
         fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/analyze_files.php", 1); ?>', {
         method: 'POST',
         credentials: 'same-origin',
@@ -4144,25 +4129,25 @@ function proceedWithAnalysis(type) {
         body: 'token=<?php echo $token; ?>'
     })
     .then(async r => {
-        console.log('🔵 [DEBUG] Respuesta de analyze_files.php - OK:', r.ok, 'Status:', r.status);
+        // Analyze response logs removed for performance
         if (!r.ok) {
             const text = await r.text();
             console.error('❌ [DEBUG] Error HTTP en analyze_files.php:', r.status, text.substring(0, 200));
             throw new Error('Error HTTP ' + r.status + ': ' + text.substring(0, 200));
         }
         const jsonData = await r.json();
-        console.log('🔵 [DEBUG] Datos recibidos de analyze_files.php:', jsonData);
+        // Received data logs removed for performance
         return jsonData;
     })
     .then(data => {
-        console.log('🔵 [DEBUG] Paso 5: Procesando respuesta - success:', data.success, 'partial:', data.partial);
+        // Response processing logs removed for performance
         
         // SI el análisis es parcial, ACTUALIZAR el archivo de progreso INMEDIATAMENTE con los datos recibidos
         // Y TAMBIÉN mostrar los datos directamente en el frontend (fallback si falla la escritura)
         if (data.success && data.partial && data.stats) {
             console.log('🔵 [DEBUG] ========================================');
             console.log('🔵 [DEBUG] Análisis parcial detectado, actualizando progreso...');
-            console.log('🔵 [DEBUG] Datos recibidos - files:', data.stats.total_files, 'folders:', data.stats.total_folders, 'size:', data.stats.total_size_mb);
+        // Statistics data logs removed for performance
             
             // PRIMERO: Mostrar datos directamente en el frontend (inmediato)
             console.log('🔵 [DEBUG] Mostrando datos directamente en el frontend (inmediato)...');
@@ -4271,7 +4256,7 @@ function proceedWithAnalysis(type) {
         }
         
         // Iniciar monitoreo DESPUÉS de que el análisis haya comenzado
-        console.log('🔵 [DEBUG] Paso 6: Iniciando monitoreo de progreso (después de que el análisis comenzó)...');
+        // Progress monitoring logs removed for performance
         setTimeout(() => {
             startProgressMonitoring();
         }, 500); // Esperar 500ms para que el análisis cree el archivo de progreso
