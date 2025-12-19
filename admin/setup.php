@@ -5707,23 +5707,25 @@ async function startChunkedBackup() {
         addLog('   Tiempo: ' + elapsed + ' segundos');
 
         // El sistema combina todos los chunks en un solo ZIP final
-        if (finalData.zip_files && finalData.zip_files.parte1) {
-            // SISTEMA DE CHUNKS COMBINADOS
-            console.log('✅ [FINALIZACIÓN] Backup completado - chunks combinados en ZIP final');
-            console.log('✅ [FINALIZACIÓN] Archivo final:', finalData.zip_files.parte1, '(', finalData.total_size_mb, 'MB)');
+        if (finalData.chunks && Array.isArray(finalData.chunks)) {
+            // SISTEMA DE CHUNKS INDIVIDUALES
+            console.log('✅ [FINALIZACIÓN] Backup completado - chunks individuales listos para descarga');
+            console.log('✅ [FINALIZACIÓN] Chunks disponibles:', finalData.chunks.length, 'Total:', finalData.total_size_mb, 'MB');
 
             const progressTextEl = document.getElementById('progressText');
             if (progressTextEl) {
-                progressTextEl.textContent = '✅ COMPLETADO: ' + finalData.total_chunks + ' chunks combinados (' + finalData.total_size_mb + ' MB total)';
+                progressTextEl.textContent = '✅ COMPLETADO: ' + finalData.total_chunks + ' chunks listos para descarga (' + finalData.total_size_mb + ' MB total)';
             }
 
-            addLog('   Sistema: Chunks combinados en ZIP final');
-            addLog('   Archivo final: ' + finalData.zip_files.parte1 + ' (' + finalData.total_size_mb + ' MB)');
-            addLog('   Chunks combinados: ' + finalData.total_chunks);
+            addLog('   Sistema: Chunks individuales para descarga por partes');
+            addLog('   Chunks disponibles: ' + finalData.total_chunks);
             addLog('   Tamaño total: ' + finalData.total_size_mb + ' MB');
+            finalData.chunks.forEach(chunk => {
+                addLog('   - Chunk #' + chunk.number + ': ' + chunk.file + ' (' + chunk.size_mb + ' MB, ' + chunk.files + ' archivos)');
+            });
 
-            // Mostrar enlaces de descarga para las 3 partes
-            showDownloadLinks(finalData.zip_files, finalData.backup_id, finalData.sizes_mb);
+            // Mostrar enlaces de descarga para chunks individuales
+            showDownloadLinks(finalData.chunks, finalData.backup_id);
 
         } else if (finalData.zip_file) {
             // SISTEMA ANTIGUO: ZIP único (compatibilidad)
@@ -5955,25 +5957,45 @@ document.addEventListener("DOMContentLoaded", function() {
 
 });
 
-// Nueva función para mostrar enlaces de descarga del backup final
-function showDownloadLinks(zipFiles, backupId, sizesMb) {
+// Nueva función para mostrar enlaces de descarga de chunks individuales
+function showDownloadLinks(chunks, backupId) {
     const downloadArea = document.getElementById('downloadArea') ||
                         document.createElement('div');
 
     downloadArea.id = 'downloadArea';
+
+    let chunksHtml = '';
+    let totalSize = 0;
+
+    if (Array.isArray(chunks)) {
+        // Sistema de chunks individuales
+        chunks.forEach(chunk => {
+            totalSize += chunk.size_mb || 0;
+            chunksHtml += `
+                <a href="scripts/download_backup.php?file=${chunk.file}&backup_id=${backupId}"
+                   class="btn btn-success btn-sm" target="_blank">
+                    <i class="fas fa-file-archive"></i> Chunk #${chunk.number} (${chunk.size_mb} MB, ${chunk.files} archivos)
+                </a>`;
+        });
+    } else {
+        // Sistema legacy de archivo único
+        chunksHtml = `
+            <a href="scripts/download_backup.php?file=${chunks.parte1}&backup_id=${backupId}"
+               class="btn btn-success btn-sm" target="_blank">
+                <i class="fas fa-file-archive"></i> Backup Completo
+            </a>`;
+    }
+
     downloadArea.innerHTML = `
         <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
             <h4 style="margin: 0 0 15px 0; color: #28a745;">
-                <i class="fas fa-download"></i> Descargar Backup Completo
+                <i class="fas fa-download"></i> Descargar Backup por Partes
             </h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                <a href="scripts/download_backup.php?file=${zipFiles.parte1}&backup_id=${backupId}"
-                   class="btn btn-success btn-sm" target="_blank">
-                    <i class="fas fa-file-archive"></i> Backup Completo${sizesMb ? ' (' + sizesMb[0] + ' MB)' : ''}
-                </a>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                ${chunksHtml}
             </div>
             <p style="margin: 10px 0 0 0; font-size: 12px; color: #6c757d;">
-                💡 Este archivo contiene todos los datos del backup. Guárdelo en un lugar seguro.
+                💡 Descargue todos los chunks para tener el backup completo. Total: ${totalSize.toFixed(1)} MB
             </p>
         </div>
     `;

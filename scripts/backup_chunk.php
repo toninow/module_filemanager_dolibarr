@@ -2338,7 +2338,7 @@ if ($action === 'finalize') {
     }
 
     chunkLog("═══════════════════════════════════════════════════════════", $logFile);
-    chunkLog("🏁 FINALIZANDO BACKUP - SISTEMA UNICO ZIP", $logFile);
+    chunkLog("🏁 FINALIZANDO BACKUP - SISTEMA MULTI-CHUNK", $logFile);
 
     // ═══════════════════════════════════════════════════════════
     // CARGA Y VALIDACIÓN INICIAL DEL ESTADO
@@ -2389,264 +2389,70 @@ if ($action === 'finalize') {
     chunkLog("✅ Todos los chunks existen físicamente", $logFile);
 
     // ═══════════════════════════════════════════════════════════
-    // NUEVO SISTEMA: UN SOLO ZIP PRINCIPAL - SIN DIVIDIR EN PARTES
+    // SISTEMA MULTI-CHUNK: MANTENER CHUNKS SEPARADOS PARA DESCARGA INDIVIDUAL
     // ═══════════════════════════════════════════════════════════
 
-    // Verificar si el ZIP principal ya existe y está completo
-    if (file_exists($finalZipFile)) {
-        $finalZipSize = filesize($finalZipFile);
-        $finalZipSizeMB = round($finalZipSize / 1024 / 1024, 2);
-        chunkLog("⚠️ ZIP principal ya existe: {$finalZipSizeMB} MB", $logFile);
+    // Verificar que todos los chunks individuales están completos y válidos
+    chunkLog("🔍 Verificando integridad de chunks individuales...", $logFile);
 
-        // Verificar qué chunks ya están en el ZIP principal
-        $zip = new ZipArchive();
-        if ($zip->open($finalZipFile, ZipArchive::CHECKCONS) === true) {
-            $chunksInMainZip = [];
+    $chunksValid = [];
+    $chunksInvalid = [];
+    $totalSize = 0;
 
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                $fileName = $zip->getNameIndex($i);
-                // Buscar chunks con patrón: chunks/chunk_backupId_*.zip
-                if (preg_match('/chunks\/chunk_' . preg_quote($backupId, '/') . '_(\d+)\.zip$/', $fileName)) {
-                    $chunksInMainZip[] = (int)$matches[1];
-                }
-            }
-            $zip->close();
-
-            chunkLog("📊 ZIP principal contiene " . count($chunksInMainZip) . " chunks", $logFile);
-
-            // Verificar si TODOS los chunks esperados están en el ZIP principal
-            $expectedChunks = $totalChunksExpected;
-            $expectedChunkNumbers = array_column($chunkZips, 'number');
-
-            $missingInMainZip = array_diff($expectedChunkNumbers, $chunksInMainZip);
-
-            if (empty($missingInMainZip)) {
-                chunkLog("✅ ZIP PRINCIPAL COMPLETO: Todos los chunks están incluidos", $logFile);
-
-                // Limpiar chunks temporales y finalizar
-                chunkLog("🧹 Limpiando chunks temporales...", $logFile);
-                $chunksDeleted = 0;
-                foreach ($state['chunk_zips'] ?? [] as $chunkInfo) {
-                    $chunkPath = $backupDir . '/' . $chunkInfo['file'];
-                    if (file_exists($chunkPath) && @unlink($chunkPath)) {
-                        $chunksDeleted++;
-                    }
-                }
-
-                // Limpiar archivos temporales
-                @unlink($stateFile);
-                @unlink($progressFile);
-                $filesListFile = $backupDir . '/filelist_' . $backupId . '.json';
-                @unlink($filesListFile);
-
-                chunkLog("✅ Eliminados $chunksDeleted chunks temporales", $logFile);
-
-        ob_clean();
-        cleanOutputAndJson([
-            'success' => true,
-            'action' => 'finalized',
-            'backup_id' => $backupId,
-            'zip_file' => basename($finalZipFile),
-                    'zip_size_mb' => $finalZipSizeMB,
-                    'chunks_added' => count($chunksInMainZip),
-                    'chunks_deleted' => $chunksDeleted,
-                    'message' => "Backup completado: {$finalZipSizeMB} MB en un solo ZIP"
-                ]);
-        exit;
-            } else {
-                chunkLog("🔄 ZIP principal incompleto: faltan " . count($missingInMainZip) . " chunks", $logFile);
-                chunkLog("   → Continuando agregando chunks faltantes...", $logFile);
-
-                // Continuar agregando chunks faltantes
-                $chunksToAdd = array_diff($expectedChunkNumbers, $chunksInMainZip);
-            }
-        } else {
-            chunkLog("⚠️ No se pudo verificar ZIP principal, recreando...", $logFile);
-            @unlink($finalZipFile);
-            $chunksToAdd = array_column($state['chunk_zips'] ?? [], 'number');
-        }
-    } else {
-        chunkLog("📦 Creando nuevo ZIP principal", $logFile);
-        $chunksToAdd = array_column($state['chunk_zips'] ?? [], 'number');
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // PROCESO DE AGREGACIÓN DE CHUNKS AL ZIP PRINCIPAL
-    // ═══════════════════════════════════════════════════════════
-
-    if (empty($chunksToAdd)) {
-        chunkLog("❌ No hay chunks para agregar", $logFile);
-        ob_clean();
-        cleanOutputAndJson(['success' => false, 'error' => 'No hay chunks para procesar']);
-        exit;
-    }
-
-    chunkLog("🔄 Agregando " . count($chunksToAdd) . " chunks al ZIP principal...", $logFile);
-    chunkLog("   📋 Chunks a procesar: " . implode(', ', $chunksToAdd), $logFile);
-
-    // Abrir ZIP principal (crear si no existe)
-    $zip = new ZipArchive();
-    $zipMode = file_exists($finalZipFile) ? ZIPARCHIVE::CREATE : ZIPARCHIVE::CREATE;
-
-    if ($zip->open($finalZipFile, $zipMode) !== true) {
-        chunkLog("❌ ERROR: No se pudo abrir/crear ZIP principal", $logFile);
-        ob_clean();
-        cleanOutputAndJson(['success' => false, 'error' => 'No se pudo abrir ZIP principal']);
-        exit;
-    }
-
-    $chunksAddedThisSession = 0;
-    $startTime = microtime(true);
-    $maxTimePerSession = $isUltraRestricted ? 10 : ($isLocalhost ? 25 : 20); // segundos
-
-    // Usar la lista de chunks ya validada
-
-    foreach ($chunksToAdd as $chunkNumber) {
-        // Verificar tiempo disponible
-        $elapsedTime = microtime(true) - $startTime;
-        if ($elapsedTime > $maxTimePerSession) {
-            chunkLog("⏰ TIEMPO LÍMITE ALCANZADO: Cerrando ZIP para continuar después", $logFile);
-            chunkLog("   → Agregados esta sesión: $chunksAddedThisSession", $logFile);
-            break;
-        }
-
-        // Encontrar información del chunk
-        $chunkInfo = null;
-        foreach ($chunkZips as $chunk) {
-            if ($chunk['number'] == $chunkNumber) {
-                $chunkInfo = $chunk;
-                break;
-            }
-        }
-
-        if (!$chunkInfo) {
-            chunkLog("⚠️ Chunk $chunkNumber no encontrado en estado", $logFile);
-            continue;
-        }
-
+    foreach ($chunkZips as $chunkInfo) {
         $chunkPath = $backupDir . '/' . $chunkInfo['file'];
 
         if (!file_exists($chunkPath)) {
-            chunkLog("❌ Chunk $chunkNumber no existe: " . $chunkInfo['file'], $logFile);
+            $chunksInvalid[] = $chunkInfo['number'];
+            chunkLog("❌ Chunk #{$chunkInfo['number']} no existe: {$chunkInfo['file']}", $logFile);
             continue;
         }
 
-        // Agregar chunk al ZIP principal
         $chunkSize = filesize($chunkPath);
         $chunkSizeMB = round($chunkSize / 1024 / 1024, 2);
 
-        chunkLog("➕ Procesando chunk #$chunkNumber: {$chunkSizeMB} MB", $logFile);
-        chunkLog("   📁 Archivo: " . basename($chunkPath), $logFile);
-
-        if ($zip->addFile($chunkPath, 'chunks/' . basename($chunkInfo['file']))) {
-            $chunksAddedThisSession++;
-
-            // Actualizar estado
-            if (!isset($state['chunks_added_to_main'])) {
-                $state['chunks_added_to_main'] = [];
-            }
-            if (!in_array($chunkNumber, $state['chunks_added_to_main'])) {
-                $state['chunks_added_to_main'][] = $chunkNumber;
-            }
-
-            chunkLog("✅ Chunk #$chunkNumber agregado exitosamente al ZIP", $logFile);
-            chunkLog("   💾 Guardado como: chunks/" . basename($chunkInfo['file']), $logFile);
+        // Verificar que es un ZIP válido
+        $testZip = new ZipArchive();
+        $isValidZip = $testZip->open($chunkPath, ZipArchive::CHECKCONS) === true;
+        if ($isValidZip) {
+            $testZip->close();
+            $chunksValid[] = [
+                'number' => $chunkInfo['number'],
+                'file' => $chunkInfo['file'],
+                'size_mb' => $chunkSizeMB,
+                'files' => $chunkInfo['files'] ?? 0
+            ];
+            $totalSize += $chunkSizeMB;
+            chunkLog("✅ Chunk #{$chunkInfo['number']} válido: {$chunkSizeMB} MB", $logFile);
         } else {
-            chunkLog("❌ ERROR: Falló agregar chunk #$chunkNumber al ZIP", $logFile);
-            chunkLog("   🔍 Verificar: permisos de escritura, espacio en disco", $logFile);
+            $chunksInvalid[] = $chunkInfo['number'];
+            chunkLog("❌ Chunk #{$chunkInfo['number']} corrupto: {$chunkInfo['file']}", $logFile);
         }
     }
 
-    // Cerrar ZIP
-    $zip->close();
-
-    // Actualizar estado
-    @file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
-
-    $finalZipSize = filesize($finalZipFile);
-    $finalZipSizeMB = round($finalZipSize / 1024 / 1024, 2);
-
-    chunkLog("📦 ZIP principal actualizado: {$finalZipSizeMB} MB", $logFile);
-    chunkLog("✅ Agregados en esta sesión: $chunksAddedThisSession", $logFile);
-
-    // Verificar si ya agregamos todos los chunks
-    $chunksAddedToMain = $state['chunks_added_to_main'] ?? [];
-    $allChunksAdded = count($chunksAddedToMain) === count($chunkZips);
-
-    if ($allChunksAdded) {
-        chunkLog("🎉 ¡COMPLETADO! Todos los chunks agregados al ZIP principal", $logFile);
-        chunkLog("📊 Total procesado: $totalChunksExpected chunks en un solo ZIP", $logFile);
-
-        // Verificación final
-        chunkLog("🔍 Verificación final del ZIP principal...", $logFile);
-
-        $verifyZip = new ZipArchive();
-        if ($verifyZip->open($finalZipFile, ZIPARCHIVE::CHECKCONS) === true) {
-            $chunksVerified = 0;
-            for ($i = 0; $i < $verifyZip->numFiles; $i++) {
-                $fileName = $verifyZip->getNameIndex($i);
-                if (preg_match('/chunks\/chunk_' . preg_quote($backupId, '/') . '_(\d+)\.zip$/', $fileName)) {
-                    $chunksVerified++;
-                }
-            }
-            $verifyZip->close();
-
-            if ($chunksVerified === count($chunkZips)) {
-                chunkLog("✅ VERIFICACIÓN PASADA: $chunksVerified chunks en ZIP principal", $logFile);
-
-                // Limpiar chunks temporales
-                chunkLog("🧹 Eliminando chunks temporales...", $logFile);
-                $chunksDeleted = 0;
-                foreach ($chunkZips as $chunkInfo) {
-                    $chunkPath = $backupDir . '/' . $chunkInfo['file'];
-                    if (file_exists($chunkPath) && @unlink($chunkPath)) {
-                        $chunksDeleted++;
-                    }
-                }
-
-        // Limpiar archivos temporales
-        @unlink($stateFile);
-        @unlink($progressFile);
-        $filesListFile = $backupDir . '/filelist_' . $backupId . '.json';
-        @unlink($filesListFile);
-        
-                chunkLog("✅ Eliminados $chunksDeleted chunks temporales", $logFile);
-
-                ob_clean();
-                cleanOutputAndJson([
-                    'success' => true,
-                    'action' => 'finalized',
-                    'backup_id' => $backupId,
-                    'zip_file' => basename($finalZipFile),
-                    'zip_size_mb' => $finalZipSizeMB,
-                    'chunks_added' => $chunksVerified,
-                    'chunks_deleted' => $chunksDeleted,
-                    'message' => "Backup completado: {$finalZipSizeMB} MB en un solo ZIP"
-                ]);
-                exit;
-            } else {
-                chunkLog("❌ VERIFICACIÓN FALLIDA: Esperados " . count($chunkZips) . ", encontrados $chunksVerified", $logFile);
-    }
-            } else {
-            chunkLog("❌ ERROR: No se pudo verificar ZIP principal", $logFile);
-            }
-        } else {
-        $remaining = count($chunkZips) - count($chunksAddedToMain);
-        chunkLog("🔄 Quedan $remaining chunks por agregar", $logFile);
-        chunkLog("   → El proceso continuará en la siguiente ejecución", $logFile);
+    if (!empty($chunksInvalid)) {
+        chunkLog("❌ ERROR: " . count($chunksInvalid) . " chunks inválidos encontrados", $logFile);
+        ob_clean();
+        cleanOutputAndJson([
+            'success' => false,
+            'error' => 'Chunks inválidos encontrados: ' . implode(', ', $chunksInvalid)
+        ]);
+        exit;
     }
 
-    // Si llegamos aquí, el proceso no está completo
+    chunkLog("✅ Todos los chunks válidos - Backup listo para descarga por partes", $logFile);
+    chunkLog("📊 Total: " . count($chunksValid) . " chunks, {$totalSize} MB", $logFile);
+
+    // Backup completado - devolver información de chunks individuales
     ob_clean();
     cleanOutputAndJson([
-        'success' => false,
-        'action' => 'finalize_continue',
+        'success' => true,
+        'action' => 'finalized',
         'backup_id' => $backupId,
-        'chunks_added_this_session' => $chunksAddedThisSession,
-        'chunks_added_total' => count($chunksAddedToMain),
-        'chunks_total' => count($chunkZips),
-        'zip_size_mb' => $finalZipSizeMB,
-        'message' => "Continuando finalización: " . count($chunksAddedToMain) . "/" . count($chunkZips) . " chunks agregados"
+        'chunks' => $chunksValid,
+        'total_chunks' => count($chunksValid),
+        'total_size_mb' => $totalSize,
+        'message' => "Backup completado: " . count($chunksValid) . " chunks listos para descarga individual ({$totalSize} MB total)"
     ]);
     exit;
 // ============================================================
