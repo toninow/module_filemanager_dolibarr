@@ -4365,7 +4365,7 @@ function proceedWithAnalysis(type) {
                     }
                 })
                 .catch(error => {
-                    console.error('❌ [DEBUG] Error en continuación:', error);
+                    console.error('Error en continuación:', error);
                     const currentPathEl = document.getElementById('currentPath');
                     if (currentPathEl) {
                         currentPathEl.textContent = '❌ Error: ' + error.message;
@@ -4479,7 +4479,7 @@ function proceedWithAnalysis(type) {
         });
     })
     .catch(error => {
-        console.error('❌ [DEBUG] Error crítico en limpieza de progreso:', error);
+        console.error('Error en limpieza de progreso:', error);
         // Continuar de todas formas, pero mostrar advertencia
         const currentPathEl = document.getElementById('currentPath');
         if (currentPathEl) {
@@ -4494,7 +4494,7 @@ function proceedWithAnalysis(type) {
                 currentPathEl2.style.color = '#007bff';
             }
             // Iniciar análisis directamente
-            console.log('🔵 [DEBUG] Iniciando análisis después de error en limpieza...');
+            // Starting analysis after cleanup error - debug logs removed for performance
             // TODO: Aquí deberíamos llamar al análisis, pero por ahora solo logueamos
         }, 1000);
     });
@@ -4780,7 +4780,7 @@ async function startChunkedBackup() {
 
         if (!backupId) {
             logLoadAttempts++;
-            console.log('❌ [DEBUG] No hay backupId - cancelando carga de logs');
+            // No backupId - canceling log loading - debug logs removed for performance
 
             // Si no hay backupId después de varios intentos, mostrar mensaje
             if (logLoadAttempts > 3 && logElement && !serverLogLoaded) {
@@ -4834,7 +4834,7 @@ async function startChunkedBackup() {
                     }
                 }
             } else if (data.error) {
-                console.log('❌ [DEBUG] Error del servidor:', data.error);
+                // Server error logged - debug logs removed for performance
 
                 // Si hay error, agregarlo al log solo si no lo hemos mostrado antes
                 if (logElement) {
@@ -4870,7 +4870,7 @@ async function startChunkedBackup() {
                 }
             }
         } catch(e) {
-            console.error('❌ [DEBUG] Error de red/exception:', e);
+            console.error('Error de red/exception:', e);
 
             // Solo mostrar error si es relevante y no lo hemos mostrado antes
             if (logLoadAttempts % 10 === 0 && logElement) {
