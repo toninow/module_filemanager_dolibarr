@@ -54,15 +54,17 @@ langs/de_DE/
 lib/backup_translations.lib.php
 lib/usage_tracker.lib.php
 
-# Scripts auxiliares eliminados
+# Scripts auxiliares eliminados (excepto críticos)
 scripts/analyze_database.php
-scripts/cleanup_analysis_progress.php
 scripts/cleanup_locks.php
 scripts/delete_backup.php
 scripts/download_backup.php
 scripts/get_analysis_progress.php
-scripts/get_server_time.php
 scripts/update_analysis_progress.php
+
+# Scripts críticos mantenidos
+# scripts/cleanup_analysis_progress.php - MANTENIDO (necesario)
+# scripts/get_server_time.php - MANTENIDO (necesario)
 
 # Archivos admin auxiliares
 admin/stats.php
