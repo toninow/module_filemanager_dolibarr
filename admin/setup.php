@@ -5585,9 +5585,10 @@ async function startChunkedBackup() {
         
         const finalElapsed = Math.round((Date.now() - startTime) / 1000);
         const finalElapsedStr = finalElapsed < 60 ? finalElapsed + 's' : Math.floor(finalElapsed/60) + 'm ' + Math.round(finalElapsed%60) + 's';
-        
-        addLog('🏁 Finalizando backup (creando 3 partes)...');
-        updateBar(98, '🏁 Finalizando y creando 3 partes...', finalElapsedStr, 'calculando...');
+
+        // El sistema combina todos los chunks en un solo ZIP final
+        addLog('🏁 Finalizando backup (combinando chunks en ZIP final)...');
+        updateBar(98, '🏁 Finalizando y combinando chunks...', finalElapsedStr, 'calculando...');
         
         // Finalización por chunks (múltiples requests)
         let finalizing = true;
@@ -5693,7 +5694,7 @@ async function startChunkedBackup() {
             }
         }
         
-        // ÉXITO - Manejar tanto sistema antiguo como nuevo de 3 partes
+        // ÉXITO - Backup completado exitosamente
         const bar = document.getElementById('progressBar');
         bar.style.width = '100%';
         bar.textContent = '100%';
@@ -5705,25 +5706,21 @@ async function startChunkedBackup() {
         addLog('✅ BACKUP COMPLETADO EXITOSAMENTE');
         addLog('   Tiempo: ' + elapsed + ' segundos');
 
-        // Manejar sistema de 3 partes o sistema antiguo
-        if (finalData.zip_files && finalData.zip_files.parte1 && finalData.zip_files.parte2 && finalData.zip_files.parte3) {
-            // SISTEMA NUEVO: 3 partes
-            console.log('✅ [FINALIZACIÓN] Sistema de 3 partes detectado');
-            console.log('✅ [FINALIZACIÓN] Parte 1:', finalData.zip_files.parte1, '(', finalData.sizes_mb[0], 'MB)');
-            console.log('✅ [FINALIZACIÓN] Parte 2:', finalData.zip_files.parte2, '(', finalData.sizes_mb[1], 'MB)');
-            console.log('✅ [FINALIZACIÓN] Parte 3:', finalData.zip_files.parte3, '(', finalData.sizes_mb[2], 'MB)');
+        // El sistema combina todos los chunks en un solo ZIP final
+        if (finalData.zip_files && finalData.zip_files.parte1) {
+            // SISTEMA DE CHUNKS COMBINADOS
+            console.log('✅ [FINALIZACIÓN] Backup completado - chunks combinados en ZIP final');
+            console.log('✅ [FINALIZACIÓN] Archivo final:', finalData.zip_files.parte1, '(', finalData.total_size_mb, 'MB)');
 
             const progressTextEl = document.getElementById('progressText');
             if (progressTextEl) {
-                progressTextEl.textContent = '✅ COMPLETADO: 3 partes (' + finalData.total_size_mb + ' MB total)';
+                progressTextEl.textContent = '✅ COMPLETADO: ' + finalData.total_chunks + ' chunks combinados (' + finalData.total_size_mb + ' MB total)';
             }
 
-            addLog('   Sistema: Backup dividido en 3 partes');
-            addLog('   Parte 1: ' + finalData.zip_files.parte1 + ' (' + finalData.sizes_mb[0] + ' MB)');
-            addLog('   Parte 2: ' + finalData.zip_files.parte2 + ' (' + finalData.sizes_mb[1] + ' MB)');
-            addLog('   Parte 3: ' + finalData.zip_files.parte3 + ' (' + finalData.sizes_mb[2] + ' MB)');
+            addLog('   Sistema: Chunks combinados en ZIP final');
+            addLog('   Archivo final: ' + finalData.zip_files.parte1 + ' (' + finalData.total_size_mb + ' MB)');
+            addLog('   Chunks combinados: ' + finalData.total_chunks);
             addLog('   Tamaño total: ' + finalData.total_size_mb + ' MB');
-            addLog('   Chunks totales: ' + finalData.total_chunks);
 
             // Mostrar enlaces de descarga para las 3 partes
             showDownloadLinks(finalData.zip_files, finalData.backup_id, finalData.sizes_mb);
@@ -5958,7 +5955,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 });
 
-// Nueva función para mostrar enlaces de descarga de las 3 partes
+// Nueva función para mostrar enlaces de descarga del backup final
 function showDownloadLinks(zipFiles, backupId, sizesMb) {
     const downloadArea = document.getElementById('downloadArea') ||
                         document.createElement('div');
@@ -5967,24 +5964,16 @@ function showDownloadLinks(zipFiles, backupId, sizesMb) {
     downloadArea.innerHTML = `
         <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
             <h4 style="margin: 0 0 15px 0; color: #28a745;">
-                <i class="fas fa-download"></i> Descargar Backup (3 partes)
+                <i class="fas fa-download"></i> Descargar Backup Completo
             </h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
                 <a href="scripts/download_backup.php?file=${zipFiles.parte1}&backup_id=${backupId}"
                    class="btn btn-success btn-sm" target="_blank">
-                    <i class="fas fa-file-archive"></i> Parte 1${sizesMb ? ' (' + sizesMb[0] + ' MB)' : ''}
-                </a>
-                <a href="scripts/download_backup.php?file=${zipFiles.parte2}&backup_id=${backupId}"
-                   class="btn btn-success btn-sm" target="_blank">
-                    <i class="fas fa-file-archive"></i> Parte 2${sizesMb ? ' (' + sizesMb[1] + ' MB)' : ''}
-                </a>
-                <a href="scripts/download_backup.php?file=${zipFiles.parte3}&backup_id=${backupId}"
-                   class="btn btn-success btn-sm" target="_blank">
-                    <i class="fas fa-file-archive"></i> Parte 3${sizesMb ? ' (' + sizesMb[2] + ' MB)' : ''}
+                    <i class="fas fa-file-archive"></i> Backup Completo${sizesMb ? ' (' + sizesMb[0] + ' MB)' : ''}
                 </a>
             </div>
             <p style="margin: 10px 0 0 0; font-size: 12px; color: #6c757d;">
-                💡 Todas las partes son necesarias para una recuperación completa del backup.
+                💡 Este archivo contiene todos los datos del backup. Guárdelo en un lugar seguro.
             </p>
         </div>
     `;
