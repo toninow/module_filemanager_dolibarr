@@ -2604,7 +2604,7 @@ if ($action === 'status') {
         exit;
     }
     
-    $state = @json_decode(@file_get_contents($stateFile), associative: true);
+    $state = @json_decode(@file_get_contents($stateFile), true);
     
     // Calcular tamaño total de todos los chunks procesados
     $totalZipSize = 0;
