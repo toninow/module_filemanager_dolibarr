@@ -3919,25 +3919,10 @@ function proceedWithAnalysis(type) {
                 return r.ok ? r.json() : null;
             })
             .then(data => {
-                // Actualizar UI incluso si no está corriendo todavía (para mostrar valores iniciales)
-                // Si no hay datos o el análisis no está corriendo y hay valores > 0, resetear a 0
+                // Actualizar UI con datos válidos (siempre actualizar cuando hay datos válidos)
                 if (data && data.success) {
-                    // Valid data received - debug logs removed for performance
-                    // Si el análisis no está corriendo pero hay valores, podría ser datos antiguos
-                    // En ese caso, solo actualizar si el análisis está corriendo o si los valores son 0
-                    if (data.running || (!data.running && data.stats && data.stats.total_files === 0)) {
-                        // UI updated with valid data - debug logs removed for performance
-                        updateProgressUI(data);
-                    } else {
-                        // Datos antiguos, resetear a 0
-                        console.warn('⚠️ [DEBUG] Datos antiguos detectados, reseteando a 0');
-                        const statFiles = document.getElementById('statFiles');
-                        const statFolders = document.getElementById('statFolders');
-                        const statSize = document.getElementById('statSize');
-                        if (statFiles) statFiles.textContent = '0';
-                        if (statFolders) statFolders.textContent = '0';
-                        if (statSize) statSize.textContent = '0 B';
-                    }
+                    // Datos válidos recibidos - actualizar UI
+                    updateProgressUI(data);
                 } else {
                     // Waiting for data logs removed for performance
                 }
