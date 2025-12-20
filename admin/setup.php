@@ -8652,7 +8652,7 @@ async function startChunkDownload() {
         statusText.textContent = 'Obteniendo información del backup...';
         logMessage('📊 Consultando información del backup...', 'info');
 
-        const infoResponse = await fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/descargar_backup.php", 1); ?>?action=info&t=' + Date.now(), {
+        const infoResponse = await fetch('<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/descargar_backup.php'; ?>?action=info&t=' + Date.now(), {
             signal: chunkDownloadController.signal
         });
 
@@ -8686,7 +8686,7 @@ async function startChunkDownload() {
             logMessage(`📦 Descargando chunk ${chunk.numero}/${totalChunks}: ${chunk.archivo} (${chunk.tamano_mb} MB)`, 'info');
 
             try {
-                const chunkResponse = await fetch(`<?php echo dol_buildpath("/custom/filemanager/scripts/descargar_backup.php", 1); ?>?action=descargar&chunk=${chunk.numero}&t=${Date.now()}`, {
+                const chunkResponse = await fetch(`<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/descargar_backup.php'; ?>?action=descargar&chunk=${chunk.numero}&t=${Date.now()}`, {
                     signal: chunkDownloadController.signal
                 });
 
@@ -8903,7 +8903,7 @@ function deleteChunks(backupId) {
     }
 
     // Hacer petición para eliminar chunks
-    fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/cleanup_chunks.php", 1); ?>?backup_id=' + backupId + '&action=delete&t=' + Date.now())
+    fetch('<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php'; ?>?backup_id=' + backupId + '&action=delete&t=' + Date.now())
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -9017,7 +9017,7 @@ function updateBackupStats() {
 }
 
 function loadAvailableChunks() {
-    fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/cleanup_chunks.php", 1); ?>?action=list&t=' + Date.now())
+    fetch('<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php'; ?>?action=list&t=' + Date.now())
         .then(response => response.json())
         .then(data => {
             if (data.success && data.chunks.length > 0) {
@@ -9066,7 +9066,7 @@ function addChunksToTable(chunks) {
         const actionsCell = document.createElement('td');
         actionsCell.className = 'right';
         actionsCell.innerHTML = `
-            <a class="butAction" href="<?php echo dol_buildpath("/custom/filemanager/scripts/descargar_backup.php", 1); ?>?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}"
+            <a class="butAction" href="<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/descargar_backup.php'; ?>?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}"
                title="Descargar este chunk" target="_blank">
                 <i class="fas fa-download"></i> Descargar
             </a>
