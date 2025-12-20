@@ -2769,7 +2769,7 @@ function startProgressMonitoring(type = null) {
             return;
         }
         
-        const progressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/get_progress.php", 1); ?>?backup_id=' + currentBackupId + '&t=' + Date.now();
+        const progressUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/get_progress.php'; ?>?backup_id=' + currentBackupId + '&t=' + Date.now();
         
         fetch(progressUrl, {
             method: 'GET',
@@ -3145,7 +3145,7 @@ function fallbackCopyLog(text) {
 function stopBackup() {
     // Crear archivo de stop para que el backend lo detecte
     if (currentBackupId) {
-        const stopUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/stop_backup.php", 1); ?>?backup_id=' + currentBackupId + '&t=' + Date.now();
+        const stopUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/stop_backup.php'; ?>?backup_id=' + currentBackupId + '&t=' + Date.now();
         fetch(stopUrl, { method: 'GET', cache: 'no-cache' })
             .then(response => response.json())
             .then(data => {
@@ -3189,7 +3189,7 @@ function stopBackup() {
     
     // Limpiar archivos del backup si hay un backupId
     if (currentBackupId) {
-        const cleanupUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/cleanup_backup.php", 1); ?>?backup_id=' + currentBackupId + '&t=' + Date.now();
+        const cleanupUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/cleanup_backup.php'; ?>?backup_id=' + currentBackupId + '&t=' + Date.now();
         fetch(cleanupUrl, { method: 'GET', cache: 'no-cache' })
             .then(response => response.json())
             .then(data => {
@@ -7769,7 +7769,7 @@ function startAutoBackupProgressMonitoring(backupId) {
             return;
         }
         
-        const progressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/get_progress.php", 1); ?>?backup_id=' + autoBackupCurrentId + '&t=' + Date.now();
+        const progressUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/get_progress.php'; ?>?backup_id=' + autoBackupCurrentId + '&t=' + Date.now();
         
         fetch(progressUrl, {
             method: 'GET',
