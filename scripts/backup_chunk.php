@@ -760,9 +760,14 @@ function getZipErrorMessage($errorCode) {
 // ============================================================
 // ACCIÓN: INIT - Listar archivos y preparar
 // ============================================================
+chunkLog("🚀 ACCIÓN INIT INICIADA - Action: $action, BackupID: $backupId", $logFile);
+
 if ($action === 'init' || $action === 'continue_listing') {
+    chunkLog("📋 PROCESANDO ACTION: " . ($action === 'init' ? 'INIT' : 'CONTINUE_LISTING'), $logFile);
+
     if (empty($backupId)) {
         $backupId = date('YmdHis');
+        chunkLog("🆔 BackupID generado: $backupId", $logFile);
         $stateFile = $backupDir . '/chunk_state_' . $backupId . '.json';
         // OPTIMIZACIÓN: Usar directamente el nombre final para evitar rename/copy
         $zipFile = $backupDir . '/files_dolibarr_' . $backupId . '.zip';
@@ -894,7 +899,11 @@ if ($action === 'init' || $action === 'continue_listing') {
         $analysisCheckpointFile = $backupDir . '/analysis_checkpoint_' . $backupId . '.json';
 
         // VERIFICAR ANÁLISIS PREVIO Y CHECKPOINTS
+        chunkLog("🔍 INICIANDO VERIFICACIÓN DE ANÁLISIS PREVIO", $logFile);
+        chunkLog("   Archivo buscado: $preAnalyzedFile", $logFile);
+
         if (file_exists($preAnalyzedFile)) {
+            chunkLog("✅ Archivo de análisis previo ENCONTRADO", $logFile);
             chunkLog("📂 Buscando análisis previo dinámico...", $logFile);
             $preAnalyzedData = @json_decode(@file_get_contents($preAnalyzedFile), true);
 
@@ -1375,24 +1384,41 @@ if ($action === 'init' || $action === 'continue_listing') {
     ], $progressFile);
     
     // Calcular estadísticas adicionales para el frontend
+    chunkLog("🔢 CALCULANDO ESTADÍSTICAS FINALES...", $logFile);
+    chunkLog("   Total archivos en array: " . count($allFiles), $logFile);
+
     $totalSize = 0;
     $totalFolders = 0;
+    $sampleFiles = [];
 
-    // Contar carpetas y calcular tamaño total aproximado
+    // Contar carpetas y calcular tamaño total aproximado (solo de primeros 1000 archivos para performance)
+    $count = 0;
     foreach ($allFiles as $filePath) {
-        if (is_dir($filePath)) {
-            $totalFolders++;
-        } else {
-            // Estimación aproximada del tamaño (no precisa pero suficiente para UI)
-            $fileSize = @filesize($filePath);
-            if ($fileSize !== false) {
-                $totalSize += $fileSize;
+        if ($count >= 1000) break; // Solo procesar primeros 1000 para performance
+
+        if (is_string($filePath) && !empty($filePath)) {
+            $sampleFiles[] = basename($filePath);
+
+            if (is_dir($filePath)) {
+                $totalFolders++;
+            } else {
+                // Estimación aproximada del tamaño (no precisa pero suficiente para UI)
+                $fileSize = @filesize($filePath);
+                if ($fileSize !== false) {
+                    $totalSize += $fileSize;
+                }
             }
         }
+        $count++;
     }
 
     $totalSizeMB = round($totalSize / 1024 / 1024, 2);
 
+    chunkLog("📊 ESTADÍSTICAS CALCULADAS:", $logFile);
+    chunkLog("   - Total archivos: " . $totalFiles, $logFile);
+    chunkLog("   - Total carpetas: " . $totalFolders, $logFile);
+    chunkLog("   - Tamaño estimado: " . $totalSizeMB . " MB", $logFile);
+    chunkLog("   - Archivos de muestra: " . implode(', ', array_slice($sampleFiles, 0, 3)), $logFile);
     chunkLog("📤 RETORNANDO ANÁLISIS AL FRONTEND: files=" . $totalFiles . ", folders=" . $totalFolders . ", size=" . $totalSizeMB . "MB", $logFile);
 
     cleanOutputAndJson([
