@@ -1428,7 +1428,12 @@ if ($action === 'init' || $action === 'continue_listing') {
 
     // ACTUALIZAR ARCHIVO DE PROGRESO PARA QUE EL POLLING LO LEA
     $tempDir = sys_get_temp_dir();
-    $progressFile = $tempDir . '/analysis_progress_' . session_id() . '.json';
+    $sessionId = session_id();
+    $progressFile = $tempDir . '/analysis_progress_' . $sessionId . '.json';
+
+    chunkLog("📁 Directorio temp: $tempDir", $logFile);
+    chunkLog("🔑 Session ID: $sessionId", $logFile);
+    chunkLog("📄 Archivo progreso: $progressFile", $logFile);
 
     $progressData = [
         'running' => false, // Análisis completado
@@ -1443,8 +1448,14 @@ if ($action === 'init' || $action === 'continue_listing') {
 
     $jsonContent = json_encode($progressData, JSON_PRETTY_PRINT);
     if ($jsonContent !== false) {
-        @file_put_contents($progressFile, $jsonContent);
-        chunkLog("💾 Archivo de progreso actualizado para polling", $logFile);
+        $result = @file_put_contents($progressFile, $jsonContent);
+        if ($result !== false) {
+            chunkLog("✅ Archivo de progreso actualizado correctamente (" . strlen($jsonContent) . " bytes)", $logFile);
+        } else {
+            chunkLog("❌ ERROR: No se pudo guardar archivo de progreso", $logFile);
+        }
+    } else {
+        chunkLog("❌ ERROR: No se pudo codificar JSON del progreso", $logFile);
     }
 
     cleanOutputAndJson([
