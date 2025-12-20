@@ -5986,11 +5986,27 @@ function showDownloadLinks(chunks, backupId) {
             </a>`;
     }
 
+    // Agregar botón "Descargar Todos" si hay múltiples chunks
+    let downloadAllSection = '';
+    if (Array.isArray(chunks) && chunks.length > 1) {
+        downloadAllSection = `
+            <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
+                <button onclick="downloadAllChunks(${JSON.stringify(chunks)}, '${backupId}')"
+                        class="btn btn-primary" style="margin-right: 10px;">
+                    <i class="fas fa-download"></i> Descargar Todos los Chunks Automáticamente (${chunks.length} archivos)
+                </button>
+                <span style="font-size: 14px; color: #1976d2;">
+                    <i class="fas fa-info-circle"></i> Descarga todos los chunks uno por uno automáticamente
+                </span>
+            </div>`;
+    }
+
     downloadArea.innerHTML = `
         <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
             <h4 style="margin: 0 0 15px 0; color: #28a745;">
                 <i class="fas fa-download"></i> Descargar Backup por Partes
             </h4>
+            ${downloadAllSection}
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
                 ${chunksHtml}
             </div>
@@ -6002,6 +6018,139 @@ function showDownloadLinks(chunks, backupId) {
 
     const container = document.querySelector('.backup-container') || document.body;
     container.appendChild(downloadArea);
+}
+
+// Función para descargar todos los chunks automáticamente uno por uno
+async function downloadAllChunks(chunks, backupId) {
+    if (!confirm(`¿Quieres descargar todos los ${chunks.length} chunks automáticamente?\n\nSe descargarán uno por uno en secuencia.`)) {
+        return;
+    }
+
+    console.log('🚀 Iniciando descarga automática de todos los chunks...');
+
+    // Crear un indicador de progreso
+    const progressDiv = document.createElement('div');
+    progressDiv.id = 'downloadProgress';
+    progressDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 10000;
+        text-align: center;
+        min-width: 300px;
+    `;
+
+    progressDiv.innerHTML = `
+        <h4><i class="fas fa-download"></i> Descargando Chunks...</h4>
+        <div style="margin: 15px 0;">
+            <div style="width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden;">
+                <div id="downloadProgressBar" style="width: 0%; height: 100%; background: #007bff; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+        <p id="downloadStatus">Iniciando descargas...</p>
+        <button onclick="cancelAllDownloads()" class="btn btn-danger btn-sm">Cancelar</button>
+    `;
+
+    document.body.appendChild(progressDiv);
+
+    let downloadedCount = 0;
+    let isCancelled = false;
+
+    // Función para cancelar
+    window.cancelAllDownloads = function() {
+        isCancelled = true;
+        if (progressDiv) {
+            progressDiv.innerHTML = '<h4>Descarga Cancelada</h4><p>Se canceló la descarga de chunks.</p>';
+            setTimeout(() => progressDiv.remove(), 2000);
+        }
+    };
+
+    try {
+        for (let i = 0; i < chunks.length; i++) {
+            if (isCancelled) break;
+
+            const chunk = chunks[i];
+            const statusEl = document.getElementById('downloadStatus');
+            const progressBar = document.getElementById('downloadProgressBar');
+
+            if (statusEl) {
+                statusEl.textContent = `Descargando Chunk #${chunk.number} (${chunk.size_mb} MB)...`;
+            }
+
+            try {
+                // Descargar el chunk
+                const response = await fetch(`scripts/download_backup.php?file=${chunk.file}&backup_id=${backupId}&t=${Date.now()}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const blob = await response.blob();
+
+                // Crear descarga automática
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = chunk.file;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                downloadedCount++;
+                console.log(`✅ Chunk #${chunk.number} descargado correctamente`);
+
+                // Actualizar barra de progreso
+                if (progressBar) {
+                    const progress = (downloadedCount / chunks.length) * 100;
+                    progressBar.style.width = progress + '%';
+                }
+
+                // Pequeño delay entre descargas para evitar sobrecargar el navegador
+                if (i < chunks.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+            } catch (error) {
+                console.error(`❌ Error descargando chunk #${chunk.number}:`, error);
+                if (statusEl) {
+                    statusEl.textContent = `❌ Error en Chunk #${chunk.number}: ${error.message}`;
+                    statusEl.style.color = '#dc3545';
+                }
+                // Continuar con el siguiente chunk
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        // Finalizar
+        const statusEl = document.getElementById('downloadStatus');
+        if (statusEl) {
+            if (downloadedCount === chunks.length) {
+                statusEl.innerHTML = '<span style="color: #28a745;">✅ ¡Todos los chunks descargados correctamente!</span>';
+            } else {
+                statusEl.innerHTML = `<span style="color: #ffc107;">⚠️ Completado con errores: ${downloadedCount}/${chunks.length} chunks descargados</span>`;
+            }
+        }
+
+        // Ocultar el indicador después de 3 segundos
+        setTimeout(() => {
+            if (progressDiv && progressDiv.parentNode) {
+                progressDiv.remove();
+            }
+        }, 3000);
+
+    } catch (error) {
+        console.error('❌ Error general en descarga automática:', error);
+        if (progressDiv) {
+            progressDiv.innerHTML = '<h4>Error en Descarga</h4><p>' + error.message + '</p>';
+            setTimeout(() => progressDiv.remove(), 3000);
+        }
+    }
 }
 
 
