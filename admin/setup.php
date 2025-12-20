@@ -3864,7 +3864,7 @@ function proceedWithAnalysis(type) {
     
     // LIMPIAR archivos de progreso previos ANTES de iniciar el análisis
     // Esto asegura que siempre empiece desde 0
-    const cleanupProgressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/cleanup_analysis_progress.php", 1); ?>';
+    const cleanupProgressUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/cleanup_analysis_progress.php';
     
     // HACER TODO SECUENCIAL - esperar a que termine la limpieza antes de continuar
     fetch(cleanupProgressUrl + '?t=' + Date.now(), {
@@ -3899,7 +3899,7 @@ function proceedWithAnalysis(type) {
         
         // Iniciar monitoreo de progreso en tiempo real
         let progressMonitorInterval = null;
-        const progressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/get_analysis_progress.php", 1); ?>';
+        const progressUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/get_analysis_progress.php';
         
         const startProgressMonitoring = () => {
         if (progressMonitorInterval) {
@@ -4176,7 +4176,7 @@ function proceedWithAnalysis(type) {
         
         // Iniciar monitoreo DESPUÉS de iniciar el análisis (esperar 500ms para que el análisis cree el archivo)
         // Analysis step logs removed for performance
-        fetch('<?php echo dol_buildpath("/custom/filemanager/scripts/analyze_files.php", 1); ?>', {
+        fetch('<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/analyze_files.php'; ?>', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
@@ -4206,7 +4206,7 @@ function proceedWithAnalysis(type) {
             updateProgressUIDirectly(data.stats);
 
             // SEGUNDO: Intentar actualizar el archivo (para el monitoreo)
-            const updateProgressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/update_analysis_progress.php", 1); ?>';
+            const updateProgressUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/update_analysis_progress.php'; ?>';
             // Progress update URL and data logs removed for performance
             
             fetch(updateProgressUrl, {
@@ -4268,8 +4268,8 @@ function proceedWithAnalysis(type) {
                     updateProgressUIDirectly(data.stats);
                     // Continuar automáticamente
                     setTimeout(() => {
-                        const analyzeFilesUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/analyze_files.php", 1); ?>';
-                        fetch(analyzeFilesUrl, {
+        const analyzeFilesUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/analyze_files.php';
+        fetch(analyzeFilesUrl, {
                             method: 'POST',
                             credentials: 'same-origin',
                             headers: {
@@ -4373,7 +4373,7 @@ function proceedWithAnalysis(type) {
             setTimeout(() => {
                 console.log('🔄 [DEBUG] Continuando análisis automáticamente...');
                 // Hacer otra llamada al análisis (se continuará desde donde quedó)
-                const analyzeFilesUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/analyze_files.php", 1); ?>';
+                const analyzeFilesUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/analyze_files.php'; ?>';
                 console.log('🔄 [DEBUG] Llamando a:', analyzeFilesUrl);
                 
                 fetch(analyzeFilesUrl, {
@@ -4401,7 +4401,7 @@ function proceedWithAnalysis(type) {
                         // Actualizar UI con nuevos datos
                         updateProgressUIDirectly(data.stats);
                         // Actualizar archivo de progreso
-                        const updateProgressUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/update_analysis_progress.php", 1); ?>';
+                        const updateProgressUrl = '<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/update_analysis_progress.php'; ?>';
                         fetch(updateProgressUrl, {
                             method: 'POST',
                             credentials: 'same-origin',
@@ -4620,7 +4620,7 @@ var logPollingInterval = null; // Variable global para el polling de logs
 
 async function startChunkedBackup() {
     const chunkUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/backup_chunk.php';
-    const logUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/get_log.php", 1); ?>';
+    const logUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/get_log.php';
     
     // Detectar entorno restringido desde el servidor
     const isRestricted = <?php
