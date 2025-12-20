@@ -1060,7 +1060,7 @@ if (is_dir($backupDir)) {
 
 // Botones de acción según especificaciones del TXT
 $createUrl = dol_buildpath('/custom/filemanager/scripts/create_backup.php', 1);
-$downloadUrl = dol_buildpath('/custom/filemanager/scripts/download_backup.php', 1);
+$downloadUrl = dol_buildpath('/custom/filemanager/scripts/descargar_backup.php', 1);
 $disabled = $zipAvailable ? '' : ' disabled';
 
 // Estilos CSS para las tarjetas de backup - Diseño sobrio y limpio
@@ -9033,7 +9033,7 @@ async function downloadChunksSequentially(chunks, index) {
     document.getElementById('progressBar').style.width = `${progressPercent}%`;
 
     try {
-        const response = await fetch(`../scripts/download_backup.php?file=${chunk.file_name}&backup_id=${chunk.backup_id}&t=${Date.now()}`);
+        const response = await fetch(`../scripts/descargar_backup.php?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const blob = await response.blob();
