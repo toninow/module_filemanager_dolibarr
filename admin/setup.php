@@ -4619,7 +4619,7 @@ var chunkLogInterval = null;
 var logPollingInterval = null; // Variable global para el polling de logs
 
 async function startChunkedBackup() {
-    const chunkUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/test_access.php", 1); ?>';
+    const chunkUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/test_simple.php';
     const logUrl = '<?php echo dol_buildpath("/custom/filemanager/scripts/get_log.php", 1); ?>';
     
     // Detectar entorno restringido desde el servidor
