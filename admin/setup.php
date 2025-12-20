@@ -2165,6 +2165,9 @@ if (typeof window.switchSetupTab === 'undefined') {
         backupTab.classList.remove("inactive");
         backupTab.classList.add("active");
         backupContent.style.display = "block";
+
+        // Verificar si hay backups existentes y mostrar botones de descarga
+        checkExistingBackups();
         } else if (tabName === "logs" && logsTab && logsContent) {
             logsTab.classList.remove("inactive");
             logsTab.classList.add("active");
@@ -6151,6 +6154,69 @@ async function downloadAllChunks(chunks, backupId) {
             setTimeout(() => progressDiv.remove(), 3000);
         }
     }
+}
+
+// Función para verificar backups existentes y mostrar botones de descarga
+function checkExistingBackups() {
+    console.log('🔍 Verificando backups existentes...');
+
+    // Buscar chunks existentes
+    fetch('<?php echo "http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php"; ?>?action=list&t=' + Date.now())
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.chunks && data.chunks.length > 0) {
+                console.log('✅ Se encontraron', data.chunks.length, 'chunks existentes');
+
+                // Agrupar chunks por backup_id
+                const backupsById = {};
+                data.chunks.forEach(chunk => {
+                    if (!backupsById[chunk.backup_id]) {
+                        backupsById[chunk.backup_id] = [];
+                    }
+                    backupsById[chunk.backup_id].push(chunk);
+                });
+
+                // Para cada backup, mostrar los botones de descarga
+                Object.keys(backupsById).forEach(backupId => {
+                    const chunks = backupsById[backupId];
+
+                    // Convertir el formato de chunks para que sea compatible con showDownloadLinks
+                    const formattedChunks = chunks.map(chunk => ({
+                        file: chunk.file_name,
+                        number: chunk.chunk_number,
+                        size_mb: chunk.size_mb,
+                        files: chunk.file_count || 0
+                    }));
+
+                    console.log('📦 Mostrando botones de descarga para backup', backupId, 'con', chunks.length, 'chunks');
+
+                    // Mostrar los botones de descarga
+                    showDownloadLinks(formattedChunks, backupId);
+                });
+
+                // Actualizar el texto de estado para indicar que hay backups disponibles
+                const statusEl = document.querySelector('.backup-status') || document.createElement('div');
+                statusEl.className = 'backup-status';
+                statusEl.innerHTML = `
+                    <div style="background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; border: 1px solid #c3e6cb; margin: 10px 0;">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Backups existentes encontrados:</strong> ${Object.keys(backupsById).length} backup(s) disponible(s) para descarga
+                    </div>
+                `;
+
+                // Insertar al inicio de la sección de backup
+                const backupContent = document.getElementById('backup');
+                if (backupContent && !document.querySelector('.backup-status')) {
+                    backupContent.insertBefore(statusEl, backupContent.firstChild);
+                }
+
+            } else {
+                console.log('ℹ️ No se encontraron backups existentes');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error verificando backups existentes:', error);
+        });
 }
 
 
