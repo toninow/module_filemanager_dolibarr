@@ -9161,7 +9161,7 @@ function addChunksToTable(chunks) {
                 <i class="fas fa-download"></i> Descargar
             </a>
             <a class="butActionDelete" href="javascript:void(0)"
-               onclick="deleteSingleChunk('${chunk.backup_id}', ${chunk.chunk_number}, '${chunk.file_name}')"
+               onclick="deleteSingleChunk(event, '${chunk.backup_id}', ${chunk.chunk_number}, '${chunk.file_name}')"
                title="Eliminar este chunk">
                 <i class="fas fa-trash"></i> Eliminar
             </a>
@@ -9175,7 +9175,7 @@ function addChunksToTable(chunks) {
     updateBackupStats();
 }
 
-function deleteSingleChunk(backupId, chunkNumber, fileName) {
+function deleteSingleChunk(event, backupId, chunkNumber, fileName) {
     if (!confirm(`¿Estás seguro de eliminar el chunk "${fileName}"?\n\nEsta acción no se puede deshacer.`)) {
         return;
     }
@@ -9187,15 +9187,31 @@ function deleteSingleChunk(backupId, chunkNumber, fileName) {
     deleteButton.style.pointerEvents = 'none';
 
     // Enviar solicitud de eliminación
-    fetch('<?php echo "http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php"; ?>?action=delete&t=' + Date.now(), {
+    const url = 'scripts/cleanup_chunks.php?action=delete&t=' + Date.now();
+    const fullUrl = window.location.origin + '/dolibarr/custom/filemanager/' + url;
+    console.log('Eliminando chunk:', fileName);
+    console.log('URL relativa:', url);
+    console.log('URL completa:', fullUrl);
+    console.log('Body:', 'filename=' + encodeURIComponent(fileName));
+
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: 'filename=' + encodeURIComponent(fileName)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Respuesta del servidor:', response.status, response.statusText);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('Datos recibidos:', data);
+
         if (data.success) {
             // Eliminación exitosa
             alert('Chunk eliminado correctamente.\n\nEspacio liberado: ' + (data.space_freed_mb || 0) + ' MB');
@@ -9218,8 +9234,8 @@ function deleteSingleChunk(backupId, chunkNumber, fileName) {
         }
     })
     .catch(error => {
-        console.error('Error de conexión:', error);
-        alert('Error de conexión: No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+        console.error('Error completo:', error);
+        alert('Error de conexión: ' + error.message + '\n\nVerifica que el servidor esté funcionando correctamente.');
         deleteButton.innerHTML = originalText;
         deleteButton.style.pointerEvents = 'auto';
     });
