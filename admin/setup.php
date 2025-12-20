@@ -6158,23 +6158,34 @@ async function downloadAllChunks(chunks, backupId) {
 
 // Función para verificar backups existentes y mostrar botones de descarga
 function checkExistingBackups() {
-    console.log('🔍 Verificando backups existentes...');
+    console.log('🔍 [DEBUG] checkExistingBackups() ejecutándose...');
 
     // Buscar chunks existentes
-    fetch('<?php echo "http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php"; ?>?action=list&t=' + Date.now())
-        .then(response => response.json())
+    const url = '<?php echo "http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php"; ?>?action=list&t=' + Date.now();
+    console.log('🔍 [DEBUG] Llamando a URL:', url);
+
+    fetch(url)
+        .then(response => {
+            console.log('🔍 [DEBUG] Respuesta HTTP:', response.status, response.statusText);
+            return response.json();
+        })
         .then(data => {
+            console.log('🔍 [DEBUG] Datos recibidos:', data);
+
             if (data.success && data.chunks && data.chunks.length > 0) {
                 console.log('✅ Se encontraron', data.chunks.length, 'chunks existentes');
 
                 // Agrupar chunks por backup_id
                 const backupsById = {};
                 data.chunks.forEach(chunk => {
+                    console.log('🔍 [DEBUG] Procesando chunk:', chunk);
                     if (!backupsById[chunk.backup_id]) {
                         backupsById[chunk.backup_id] = [];
                     }
                     backupsById[chunk.backup_id].push(chunk);
                 });
+
+                console.log('🔍 [DEBUG] Backups agrupados:', backupsById);
 
                 // Para cada backup, mostrar los botones de descarga
                 Object.keys(backupsById).forEach(backupId => {
@@ -6185,10 +6196,11 @@ function checkExistingBackups() {
                         file: chunk.file_name,
                         number: chunk.chunk_number,
                         size_mb: chunk.size_mb,
-                        files: chunk.file_count || 0
+                        files: 0 // No tenemos información de archivos por chunk en cleanup_chunks.php
                     }));
 
                     console.log('📦 Mostrando botones de descarga para backup', backupId, 'con', chunks.length, 'chunks');
+                    console.log('📦 Formatted chunks:', formattedChunks);
 
                     // Mostrar los botones de descarga
                     showDownloadLinks(formattedChunks, backupId);
@@ -6208,10 +6220,14 @@ function checkExistingBackups() {
                 const backupContent = document.getElementById('backup');
                 if (backupContent && !document.querySelector('.backup-status')) {
                     backupContent.insertBefore(statusEl, backupContent.firstChild);
+                    console.log('✅ Status indicator inserted');
+                } else {
+                    console.log('⚠️ Could not insert status indicator');
                 }
 
             } else {
-                console.log('ℹ️ No se encontraron backups existentes');
+                console.log('ℹ️ No se encontraron backups existentes o data.success=false');
+                console.log('ℹ️ Data:', data);
             }
         })
         .catch(error => {

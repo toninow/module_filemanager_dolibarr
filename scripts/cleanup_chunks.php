@@ -68,12 +68,11 @@ try {
     } elseif ($action === 'list') {
         // Listar chunks disponibles
         $backupDir = DOL_DOCUMENT_ROOT.'/custom/filemanager/backups';
-        $chunksDir = $backupDir . '/chunks';
 
         $chunks = [];
 
-        if (is_dir($chunksDir)) {
-            $chunkFiles = glob($chunksDir . '/chunk_*.zip');
+        if (is_dir($backupDir)) {
+            $chunkFiles = glob($backupDir . '/chunk_*.zip');
 
             foreach ($chunkFiles as $chunkFile) {
                 $fileName = basename($chunkFile);
