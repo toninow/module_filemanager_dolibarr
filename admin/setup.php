@@ -8907,11 +8907,17 @@ let allBackupItems = [];
 let currentFilter = 'all';
 
 function filterByBackupId(backupId) {
-    const rows = document.querySelectorAll('#backupTableBody tr.chunk-row');
+    const rows = document.querySelectorAll('#backupTableBody tr');
 
     rows.forEach(row => {
-        const rowBackupId = row.getAttribute('data-backup-id');
-        row.style.display = (backupId === 'all' || rowBackupId === backupId) ? '' : 'none';
+        // Solo filtrar filas que tienen data-backup-id (chunks)
+        if (row.hasAttribute('data-backup-id')) {
+            const rowBackupId = row.getAttribute('data-backup-id');
+            row.style.display = (backupId === 'all' || rowBackupId === backupId) ? '' : 'none';
+        } else {
+            // Filas sin data-backup-id (como mensajes de error) siempre visibles
+            row.style.display = '';
+        }
     });
 
     updateBackupStats();
@@ -9035,44 +9041,29 @@ async function downloadChunksSequentially(chunks, index) {
 
 function updateBackupStats() {
     const rows = document.querySelectorAll('#backupTableBody tr');
-    let totalBackups = 0;
     let totalChunks = 0;
-    let totalSizeBackups = 0;
     let totalSizeChunks = 0;
 
     rows.forEach(row => {
-        if (row.style.display !== 'none') {
-            if (row.classList.contains('backup-row')) {
-                totalBackups++;
-                // Verificar que la fila tenga suficientes celdas antes de acceder
-                if (row.cells && row.cells.length > 2 && row.cells[2]) {
-                    const sizeText = row.cells[2].textContent || '';
-                    const sizeMB = parseFloat(sizeText.replace(' MB', ''));
-                    if (!isNaN(sizeMB)) totalSizeBackups += sizeMB;
-                }
-            } else if (row.classList.contains('chunk-row')) {
-                totalChunks++;
-                // Verificar que la fila tenga suficientes celdas antes de acceder
-                if (row.cells && row.cells.length > 2 && row.cells[2]) {
-                    const sizeText = row.cells[2].textContent || '';
-                    const sizeMB = parseFloat(sizeText.replace(' MB', ''));
-                    if (!isNaN(sizeMB)) totalSizeChunks += sizeMB;
-                }
+        if (row.style.display !== 'none' && row.classList.contains('chunk-row')) {
+            totalChunks++;
+            // Verificar que la fila tenga suficientes celdas antes de acceder (celda 3 = tamaño)
+            if (row.cells && row.cells.length > 3 && row.cells[3]) {
+                const sizeText = row.cells[3].textContent || '';
+                const sizeMB = parseFloat(sizeText.replace(' MB', ''));
+                if (!isNaN(sizeMB)) totalSizeChunks += sizeMB;
             }
         }
     });
 
+    // Actualizar el texto de estadísticas
     const statsEl = document.getElementById('backupStats');
     if (statsEl) {
         let statsText = '';
-        if (currentFilter === 'all' || currentFilter === 'backups') {
-            statsText += `${totalBackups} backups (${totalSizeBackups.toFixed(1)} MB)`;
-        }
-        if (currentFilter === 'all') {
-            statsText += ' • ';
-        }
-        if (currentFilter === 'all' || currentFilter === 'chunks') {
-            statsText += `${totalChunks} chunks (${totalSizeChunks.toFixed(1)} MB)`;
+        if (totalChunks > 0) {
+            statsText = totalChunks + ' chunk' + (totalChunks !== 1 ? 's' : '') + ' (' + totalSizeChunks.toFixed(1) + ' MB)';
+        } else {
+            statsText = '0 chunks (0.0 MB)';
         }
         statsEl.textContent = statsText;
     }
@@ -9083,18 +9074,48 @@ function loadAvailableChunks() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.chunks.length > 0) {
+                // Limpiar la tabla antes de agregar chunks para evitar duplicados
+                clearBackupTable();
+
                 // Actualizar el filtro de backup IDs
                 updateBackupIdFilter(data.chunks);
                 addChunksToTable(data.chunks);
+            } else {
+                // Si no hay chunks, mostrar mensaje vacío
+                clearBackupTable();
+                showEmptyTableMessage();
             }
             // Actualizar estadísticas después de cargar chunks
             updateBackupStats();
         })
         .catch(error => {
             console.error('Error cargando chunks:', error);
-            // Actualizar estadísticas incluso si hay error
+            // Mostrar mensaje de error en la tabla
+            clearBackupTable();
+            showErrorTableMessage('Error al cargar chunks: ' + error.message);
             updateBackupStats();
         });
+}
+
+function clearBackupTable() {
+    const tableBody = document.getElementById('backupTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = '';
+    }
+}
+
+function showEmptyTableMessage() {
+    const tableBody = document.getElementById('backupTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = '<tr class="oddeven"><td colspan="6" class="opacitymedium center">No hay chunks disponibles</td></tr>';
+    }
+}
+
+function showErrorTableMessage(message) {
+    const tableBody = document.getElementById('backupTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = `<tr class="oddeven"><td colspan="6" class="opacitymedium center" style="color: #dc3545;">${message}</td></tr>`;
+    }
 }
 
 function updateBackupIdFilter(chunks) {
@@ -9103,10 +9124,14 @@ function updateBackupIdFilter(chunks) {
 
     if (!filterSelect) return;
 
-    // Limpiar opciones existentes excepto "Todos los backups"
-    while (filterSelect.options.length > 1) {
-        filterSelect.remove(1);
-    }
+    // Limpiar todas las opciones
+    filterSelect.innerHTML = '';
+
+    // Agregar opción "Todos los backups"
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Todos los backups';
+    filterSelect.appendChild(allOption);
 
     // Agregar opciones para cada backup ID
     backupIds.forEach(id => {
@@ -9115,6 +9140,13 @@ function updateBackupIdFilter(chunks) {
         option.textContent = `Backup ${id}`;
         filterSelect.appendChild(option);
     });
+
+    // Si hay múltiples backups, seleccionar "all" por defecto
+    if (backupIds.length > 1) {
+        filterSelect.value = 'all';
+    } else if (backupIds.length === 1) {
+        filterSelect.value = backupIds[0];
+    }
 }
 
 function addChunksToTable(chunks) {
