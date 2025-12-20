@@ -6,7 +6,6 @@
 // Incluir el entorno de Dolibarr
 require_once '../../../main.inc.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
-require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 
 // ========== VERIFICACIÓN DE SEGURIDAD 1: MÓDULO ACTIVADO ==========
 if (empty($conf->global->MAIN_MODULE_FILEMANAGER)) {
