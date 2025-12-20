@@ -909,7 +909,7 @@ if ($action === 'init' || $action === 'continue_listing') {
                 chunkLog("⚠️ Análisis previo no contiene archivos válidos", $logFile);
                 $preAnalyzedData = false;
             } else {
-                chunkLog("   📊 Análisis previo válido: " . number_format(count($preAnalyzedData['files'])) . " archivos", $logFile);
+                chunkLog("   📊 Análisis previo válido: " . number_format(count($preAnalyzedData['files'])) . " archivos, partial=" . ($preAnalyzedData['partial'] ? 'true' : 'false'), $logFile);
             }
             
             // Verificar si hay checkpoint de continuación
@@ -940,7 +940,7 @@ if ($action === 'init' || $action === 'continue_listing') {
             } elseif ($preAnalyzedData && isset($preAnalyzedData['files']) && is_array($preAnalyzedData['files']) &&
                      (!isset($preAnalyzedData['partial']) || !$preAnalyzedData['partial'])) {
                 // ANÁLISIS COMPLETO - USAR DIRECTAMENTE
-                chunkLog("✅ Análisis completo encontrado - usando lista existente", $logFile);
+                chunkLog("✅ ANÁLISIS COMPLETO ENCONTRADO - CONDICIÓN CUMPLIDA", $logFile);
                 chunkLog("   📊 " . number_format(count($preAnalyzedData['files'])) . " archivos en JSON", $logFile);
 
                 // Extraer rutas de archivos del análisis previo (que vienen como objetos)
@@ -1004,6 +1004,7 @@ if ($action === 'init' || $action === 'continue_listing') {
             } else {
                 // ANÁLISIS CORRUPTO - EMPEZAR DE NUEVO
                 chunkLog("⚠️ Análisis previo corrupto - iniciando análisis dinámico desde cero...", $logFile);
+                chunkLog("   ❌ Condición análisis completo NO cumplida", $logFile);
                 $allFiles = [];
                 $dirsToScan = [$dolibarrRoot];
                 $scannedDirs = [];
@@ -1013,6 +1014,7 @@ if ($action === 'init' || $action === 'continue_listing') {
             // NO HAY ANÁLISIS PREVIO - EMPEZAR DE NUEVO
             chunkLog("📂 Iniciando análisis dinámico desde cero...", $logFile);
             chunkLog("   🎯 Se guardarán checkpoints para reanudación automática", $logFile);
+            chunkLog("   ❌ No existe archivo de análisis previo", $logFile);
             $allFiles = [];
             $dirsToScan = [$dolibarrRoot];
             $scannedDirs = [];

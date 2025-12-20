@@ -5065,12 +5065,27 @@ async function startChunkedBackup() {
             }
             
         const backupId = initData.backup_id;
-        const totalFiles = initData.total_files || initData.files_found || 0;
+        const totalFiles = (initData.stats && initData.stats.total_files) || initData.total_files || initData.files_found || 0;
+        const totalFolders = (initData.stats && initData.stats.total_folders) || 0;
+        const totalSizeMB = (initData.stats && initData.stats.total_size_mb) || 0;
         const filesFound = initData.files_found || totalFiles;
         const expectedFromAnalysis = initData.expected_from_analysis;
         let processed = initData.processed || 0;
-        
+
         currentBackupId = backupId;
+
+        // ACTUALIZAR UI INMEDIATAMENTE con los datos del análisis
+        console.log('🟢 [INIT] Actualizando UI con datos del análisis:', {
+            totalFiles, totalFolders, totalSizeMB
+        });
+
+        const statFiles = document.getElementById('statFiles');
+        const statFolders = document.getElementById('statFolders');
+        const statSize = document.getElementById('statSize');
+
+        if (statFiles) statFiles.textContent = totalFiles.toLocaleString();
+        if (statFolders) statFolders.textContent = totalFolders.toLocaleString();
+        if (statSize) statSize.textContent = totalSizeMB > 0 ? formatFileSize(totalSizeMB) : '0 B';
         
         // INICIAR CARGA DE LOGS INMEDIATAMENTE EN MODO RÁPIDO
         // Esto capturará el log del análisis que acaba de ocurrir
