@@ -1389,10 +1389,15 @@ print '</div>';
 
 // Barra de progreso
 print '<div id="downloadProgress" style="display:none; margin-bottom: 15px;">';
-print '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #dee2e6;">';
-print '<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">';
-print '<span id="progressText">Descargando...</span>';
-print '<span id="progressPercent">0%</span>';
+print '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">';
+print '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">';
+print '<div>';
+print '<span id="progressText" style="font-weight: 600; color: #495057;">Descargando...</span>';
+print '<span id="progressPercent" style="margin-left: 10px; color: #6c757d;">0%</span>';
+print '</div>';
+print '<button onclick="cancelAllDownloads()" class="btn btn-danger btn-sm" id="cancelDownloadBtn">';
+print '<i class="fas fa-times"></i> Cancelar';
+print '</button>';
 print '</div>';
 print '<div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px;">';
 print '<div id="progressBar" style="width: 0%; height: 100%; background: #007bff; border-radius: 10px; transition: width 0.3s ease;"></div>';
@@ -8906,6 +8911,9 @@ function finalizeBackupAfterChunkDecision() {
 let allBackupItems = [];
 let currentFilter = 'all';
 
+// Variable global para controlar cancelación de descargas
+let isDownloadCancelled = false;
+
 function filterByBackupId(backupId) {
     const rows = document.querySelectorAll('#backupTableBody tr');
 
@@ -8981,6 +8989,9 @@ async function downloadSelectedChunks() {
 
     const chunks = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.getAttribute('data-chunk')));
 
+    // Resetear variable de cancelación
+    isDownloadCancelled = false;
+
     // Mostrar barra de progreso
     document.getElementById('downloadProgress').style.display = 'block';
 
@@ -8988,6 +8999,18 @@ async function downloadSelectedChunks() {
 }
 
 async function downloadChunksSequentially(chunks, index) {
+    // Verificar si se canceló la descarga
+    if (isDownloadCancelled) {
+        document.getElementById('progressText').textContent = 'Descarga cancelada por el usuario';
+        document.getElementById('progressPercent').textContent = 'Cancelado';
+        document.getElementById('progressBar').style.background = '#dc3545';
+
+        setTimeout(() => {
+            document.getElementById('downloadProgress').style.display = 'none';
+        }, 3000);
+        return;
+    }
+
     if (index >= chunks.length) {
         // Descarga completada
         document.getElementById('progressText').textContent = '¡Descarga completada!';
@@ -9023,20 +9046,45 @@ async function downloadChunksSequentially(chunks, index) {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
-        // Descargar siguiente chunk después de 1 segundo
-        setTimeout(() => {
-            downloadChunksSequentially(chunks, index + 1);
-        }, 1000);
+        // Verificar nuevamente si se canceló antes de continuar
+        if (!isDownloadCancelled) {
+            // Descargar siguiente chunk después de 1 segundo
+            setTimeout(() => {
+                downloadChunksSequentially(chunks, index + 1);
+            }, 1000);
+        }
 
     } catch (error) {
         console.error('Error descargando chunk:', error);
+
+        // Verificar si se canceló o si es un error real
+        if (isDownloadCancelled) {
+            document.getElementById('progressText').textContent = 'Descarga cancelada por el usuario';
+            document.getElementById('progressPercent').textContent = 'Cancelado';
+            document.getElementById('progressBar').style.background = '#dc3545';
+
+            setTimeout(() => {
+                document.getElementById('downloadProgress').style.display = 'none';
+            }, 3000);
+            return;
+        }
+
         document.getElementById('progressText').textContent = `Error en Chunk #${chunk.chunk_number}: ${error.message}`;
 
-        // Continuar con el siguiente chunk después de 2 segundos
-        setTimeout(() => {
-            downloadChunksSequentially(chunks, index + 1);
-        }, 2000);
+        // Continuar con el siguiente chunk después de 2 segundos (si no se canceló)
+        if (!isDownloadCancelled) {
+            setTimeout(() => {
+                downloadChunksSequentially(chunks, index + 1);
+            }, 2000);
+        }
     }
+}
+
+function cancelAllDownloads() {
+    isDownloadCancelled = true;
+    document.getElementById('cancelDownloadBtn').disabled = true;
+    document.getElementById('cancelDownloadBtn').innerHTML = '<i class="fas fa-times"></i> Cancelando...';
+    document.getElementById('progressText').textContent = 'Cancelando descarga...';
 }
 
 function updateBackupStats() {
