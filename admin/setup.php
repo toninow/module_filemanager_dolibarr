@@ -9176,13 +9176,53 @@ function addChunksToTable(chunks) {
 }
 
 function deleteSingleChunk(backupId, chunkNumber, fileName) {
-    if (!confirm(`¿Estás seguro de eliminar el chunk "${fileName}"?`)) {
+    if (!confirm(`¿Estás seguro de eliminar el chunk "${fileName}"?\n\nEsta acción no se puede deshacer.`)) {
         return;
     }
 
-    // Por ahora, redirigir a la funcionalidad general de cleanup
-    // En el futuro se puede implementar eliminación individual
-    alert('Función de eliminación individual próximamente. Usa "Eliminar Chunks" en el diálogo después del backup.');
+    // Mostrar indicador de carga
+    const deleteButton = event.target.closest('a');
+    const originalText = deleteButton.innerHTML;
+    deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+    deleteButton.style.pointerEvents = 'none';
+
+    // Enviar solicitud de eliminación
+    fetch('<?php echo "http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php"; ?>?action=delete&t=' + Date.now(), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'filename=' + encodeURIComponent(fileName)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Eliminación exitosa
+            alert('Chunk eliminado correctamente.\n\nEspacio liberado: ' + (data.space_freed_mb || 0) + ' MB');
+
+            // Remover la fila de la tabla
+            const row = deleteButton.closest('tr');
+            row.remove();
+
+            // Actualizar estadísticas
+            updateBackupStats();
+
+            // Recargar chunks para actualizar la lista
+            loadAvailableChunks();
+
+        } else {
+            // Error en la eliminación
+            alert('Error al eliminar el chunk: ' + (data.message || 'Error desconocido'));
+            deleteButton.innerHTML = originalText;
+            deleteButton.style.pointerEvents = 'auto';
+        }
+    })
+    .catch(error => {
+        console.error('Error de conexión:', error);
+        alert('Error de conexión: No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+        deleteButton.innerHTML = originalText;
+        deleteButton.style.pointerEvents = 'auto';
+    });
 }
 
 // Inicializar cuando se carga la página

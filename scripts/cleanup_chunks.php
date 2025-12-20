@@ -27,43 +27,63 @@ require_once $mainPath;
 // Procesar acciones
 $action = $_GET['action'] ?? '';
 $backupId = $_GET['backup_id'] ?? '';
+$fileName = $_GET['filename'] ?? $_POST['filename'] ?? '';
 
 try {
-    if ($action === 'delete' && !empty($backupId)) {
-        // Eliminar chunks de un backup específico
+    if ($action === 'delete') {
+        // Eliminar chunks
         $backupDir = DOL_DOCUMENT_ROOT.'/custom/filemanager/backups';
-        $chunksDir = $backupDir . '/chunks';
 
-        if (!is_dir($chunksDir)) {
-            echo json_encode(['success' => true, 'message' => 'No hay chunks para eliminar', 'space_freed_mb' => 0]);
+        if (!is_dir($backupDir)) {
+            echo json_encode(['success' => false, 'message' => 'Directorio de backups no encontrado']);
             exit;
         }
 
         $spaceFreed = 0;
         $chunksDeleted = 0;
 
-        // Buscar chunks del backup específico
-        $chunkPattern = $chunksDir . '/chunk_' . $backupId . '_*.zip';
-        $chunkFiles = glob($chunkPattern);
-
-        foreach ($chunkFiles as $chunkFile) {
+        // Si se especifica un archivo específico, eliminar solo ese
+        if (!empty($fileName)) {
+            $chunkFile = $backupDir . '/' . $fileName;
             if (is_file($chunkFile)) {
                 $size = filesize($chunkFile);
                 if (@unlink($chunkFile)) {
-                    $chunksDeleted++;
-                    $spaceFreed += $size;
+                    $chunksDeleted = 1;
+                    $spaceFreed = $size;
+                }
+            }
+        }
+        // Si se especifica backup_id, eliminar todos los chunks de ese backup
+        elseif (!empty($backupId)) {
+            $chunkPattern = $backupDir . '/chunk_' . $backupId . '_*.zip';
+            $chunkFiles = glob($chunkPattern);
+
+            foreach ($chunkFiles as $chunkFile) {
+                if (is_file($chunkFile)) {
+                    $size = filesize($chunkFile);
+                    if (@unlink($chunkFile)) {
+                        $chunksDeleted++;
+                        $spaceFreed += $size;
+                    }
                 }
             }
         }
 
         $spaceFreedMB = round($spaceFreed / 1024 / 1024, 2);
 
-        echo json_encode([
-            'success' => true,
-            'chunks_deleted' => $chunksDeleted,
-            'space_freed_mb' => $spaceFreedMB,
-            'message' => "Eliminados {$chunksDeleted} chunks, liberados {$spaceFreedMB} MB"
-        ]);
+        if ($chunksDeleted > 0) {
+            echo json_encode([
+                'success' => true,
+                'chunks_deleted' => $chunksDeleted,
+                'space_freed_mb' => $spaceFreedMB,
+                'message' => "Eliminados {$chunksDeleted} chunks, liberados {$spaceFreedMB} MB"
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No se encontraron chunks para eliminar'
+            ]);
+        }
 
     } elseif ($action === 'list') {
         // Listar chunks disponibles
