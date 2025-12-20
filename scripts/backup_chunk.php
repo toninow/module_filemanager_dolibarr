@@ -1426,6 +1426,27 @@ if ($action === 'init' || $action === 'continue_listing') {
     chunkLog("   - Archivos de muestra: " . implode(', ', array_slice($sampleFiles, 0, 3)), $logFile);
     chunkLog("📤 RETORNANDO ANÁLISIS AL FRONTEND: files=" . $totalFiles . ", folders=" . $totalFolders . ", size=" . $totalSizeMB . "MB", $logFile);
 
+    // ACTUALIZAR ARCHIVO DE PROGRESO PARA QUE EL POLLING LO LEA
+    $tempDir = sys_get_temp_dir();
+    $progressFile = $tempDir . '/analysis_progress_' . session_id() . '.json';
+
+    $progressData = [
+        'running' => false, // Análisis completado
+        'stats' => [
+            'total_files' => $totalFiles,
+            'total_folders' => $totalFolders,
+            'total_size_mb' => $totalSizeMB
+        ],
+        'last_update' => time(),
+        'partial' => false
+    ];
+
+    $jsonContent = json_encode($progressData, JSON_PRETTY_PRINT);
+    if ($jsonContent !== false) {
+        @file_put_contents($progressFile, $jsonContent);
+        chunkLog("💾 Archivo de progreso actualizado para polling", $logFile);
+    }
+
     cleanOutputAndJson([
         'success' => true,
         'action' => 'init',
