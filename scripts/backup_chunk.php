@@ -941,19 +941,33 @@ if ($action === 'init' || $action === 'continue_listing') {
                      (!isset($preAnalyzedData['partial']) || !$preAnalyzedData['partial'])) {
                 // ANÁLISIS COMPLETO - USAR DIRECTAMENTE
                 chunkLog("✅ Análisis completo encontrado - usando lista existente", $logFile);
-                chunkLog("   📊 " . number_format(count($preAnalyzedData['files'])) . " archivos listos", $logFile);
+                chunkLog("   📊 " . number_format(count($preAnalyzedData['files'])) . " archivos en JSON", $logFile);
 
                 // Extraer rutas de archivos del análisis previo (que vienen como objetos)
                 $allFiles = [];
-                foreach ($preAnalyzedData['files'] as $file) {
+                $validFiles = 0;
+                $invalidFiles = 0;
+
+                foreach ($preAnalyzedData['files'] as $index => $file) {
                     if (is_array($file) && isset($file['path']) && !empty($file['path'])) {
                         $allFiles[] = $file['path'];
+                        $validFiles++;
                     } elseif (is_string($file) && !empty($file)) {
                         $allFiles[] = $file;
+                        $validFiles++;
+                    } else {
+                        $invalidFiles++;
+                        // Debug: mostrar primeros elementos inválidos
+                        if ($invalidFiles <= 3) {
+                            chunkLog("   ⚠️ Elemento inválido #$index: " . gettype($file), $logFile);
+                        }
                     }
-                    // Ignorar elementos inválidos
                 }
-                chunkLog("   📊 Archivos extraídos del análisis: " . number_format(count($allFiles)), $logFile);
+
+                chunkLog("   ✅ Archivos válidos extraídos: " . number_format($validFiles), $logFile);
+                if ($invalidFiles > 0) {
+                    chunkLog("   ⚠️ Archivos inválidos ignorados: " . number_format($invalidFiles), $logFile);
+                }
                 $dirsToScan = []; // No scanear más
                 $scannedDirs = $preAnalyzedData['scanned_dirs'] ?? [];
                 $dirsProcessed = count($scannedDirs);
@@ -1172,6 +1186,7 @@ if ($action === 'init' || $action === 'continue_listing') {
         $listTime = 0; // No se hizo listado, usamos análisis previo
     }
     $totalFiles = count($allFiles);
+    chunkLog("📊 TOTAL FILES FINAL: " . number_format($totalFiles), $logFile);
     $listInterrupted = !empty($dirsToScan); // Si quedan directorios, se interrumpió
     
     // Si se interrumpió el listado, guardar progreso y continuar después
@@ -1357,11 +1372,36 @@ if ($action === 'init' || $action === 'continue_listing') {
         'processed' => 0
     ], $progressFile);
     
+    // Calcular estadísticas adicionales para el frontend
+    $totalSize = 0;
+    $totalFolders = 0;
+
+    // Contar carpetas y calcular tamaño total aproximado
+    foreach ($allFiles as $filePath) {
+        if (is_dir($filePath)) {
+            $totalFolders++;
+        } else {
+            // Estimación aproximada del tamaño (no precisa pero suficiente para UI)
+            $fileSize = @filesize($filePath);
+            if ($fileSize !== false) {
+                $totalSize += $fileSize;
+            }
+        }
+    }
+
+    $totalSizeMB = round($totalSize / 1024 / 1024, 2);
+
+    chunkLog("📤 RETORNANDO ANÁLISIS AL FRONTEND: files=" . $totalFiles . ", folders=" . $totalFolders . ", size=" . $totalSizeMB . "MB", $logFile);
+
     cleanOutputAndJson([
         'success' => true,
         'action' => 'init',
         'backup_id' => $backupId,
-        'total_files' => $totalFiles,
+        'stats' => [
+            'total_files' => $totalFiles,
+            'total_folders' => $totalFolders,
+            'total_size_mb' => $totalSizeMB
+        ],
         'processed' => 0,
         'chunk_size' => $chunkSize,
         'estimated_chunks' => $totalChunksEstimate,
