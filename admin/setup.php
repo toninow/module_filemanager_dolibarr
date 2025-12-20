@@ -3899,7 +3899,7 @@ function proceedWithAnalysis(type) {
         
         // Iniciar monitoreo de progreso en tiempo real
         let progressMonitorInterval = null;
-        const progressUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/test_progress.php';
+        const progressUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/get_analysis_progress.php';
         
         const startProgressMonitoring = () => {
         if (progressMonitorInterval) {

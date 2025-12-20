@@ -21,8 +21,6 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 
-// DEBUG: Log inicial para confirmar ejecución
-file_put_contents(__DIR__ . '/../backups/debug_init.log', date('Y-m-d H:i:s') . " - Script ejecutado con action: " . ($_GET['action'] ?? 'none') . "\n", FILE_APPEND);
 
 // Iniciar buffer de salida para capturar cualquier HTML
 ob_start();
@@ -906,8 +904,7 @@ if ($action === 'init' || $action === 'continue_listing') {
         chunkLog("   Archivo buscado: $preAnalyzedFile", $logFile);
         chunkLog("   Archivo existe: " . (file_exists($preAnalyzedFile) ? 'SÍ' : 'NO'), $logFile);
 
-        // FORZAR ANÁLISIS DINÁMICO PARA DEBUG - COMENTAR ESTA LÍNEA EN PRODUCCIÓN
-        if (file_exists($preAnalyzedFile . '.debug')) {
+        if (file_exists($preAnalyzedFile)) {
             chunkLog("✅ Archivo de análisis previo ENCONTRADO", $logFile);
             chunkLog("📂 Buscando análisis previo dinámico...", $logFile);
             $preAnalyzedData = @json_decode(@file_get_contents($preAnalyzedFile), true);
@@ -1389,12 +1386,8 @@ if ($action === 'init' || $action === 'continue_listing') {
     ], $progressFile);
     
     // Calcular estadísticas adicionales para el frontend
-    chunkLog("🔢 CALCULANDO ESTADÍSTICAS FINALES...", $logFile);
-    chunkLog("   Total archivos en array: " . count($allFiles), $logFile);
-
     $totalSize = 0;
     $totalFolders = 0;
-    $sampleFiles = [];
 
     // Contar carpetas y calcular tamaño total aproximado (solo de primeros 1000 archivos para performance)
     $count = 0;
@@ -1402,8 +1395,6 @@ if ($action === 'init' || $action === 'continue_listing') {
         if ($count >= 1000) break; // Solo procesar primeros 1000 para performance
 
         if (is_string($filePath) && !empty($filePath)) {
-            $sampleFiles[] = basename($filePath);
-
             if (is_dir($filePath)) {
                 $totalFolders++;
             } else {
@@ -1419,21 +1410,9 @@ if ($action === 'init' || $action === 'continue_listing') {
 
     $totalSizeMB = round($totalSize / 1024 / 1024, 2);
 
-    chunkLog("📊 ESTADÍSTICAS CALCULADAS:", $logFile);
-    chunkLog("   - Total archivos: " . $totalFiles, $logFile);
-    chunkLog("   - Total carpetas: " . $totalFolders, $logFile);
-    chunkLog("   - Tamaño estimado: " . $totalSizeMB . " MB", $logFile);
-    chunkLog("   - Archivos de muestra: " . implode(', ', array_slice($sampleFiles, 0, 3)), $logFile);
-    chunkLog("📤 RETORNANDO ANÁLISIS AL FRONTEND: files=" . $totalFiles . ", folders=" . $totalFolders . ", size=" . $totalSizeMB . "MB", $logFile);
-
     // ACTUALIZAR ARCHIVO DE PROGRESO PARA QUE EL POLLING LO LEA
     $tempDir = sys_get_temp_dir();
-    $sessionId = session_id();
-    $progressFile = $tempDir . '/analysis_progress_' . $sessionId . '.json';
-
-    chunkLog("📁 Directorio temp: $tempDir", $logFile);
-    chunkLog("🔑 Session ID: $sessionId", $logFile);
-    chunkLog("📄 Archivo progreso: $progressFile", $logFile);
+    $progressFile = $tempDir . '/analysis_progress_' . session_id() . '.json';
 
     $progressData = [
         'running' => false, // Análisis completado
@@ -1447,16 +1426,7 @@ if ($action === 'init' || $action === 'continue_listing') {
     ];
 
     $jsonContent = json_encode($progressData, JSON_PRETTY_PRINT);
-    if ($jsonContent !== false) {
-        $result = @file_put_contents($progressFile, $jsonContent);
-        if ($result !== false) {
-            chunkLog("✅ Archivo de progreso actualizado correctamente (" . strlen($jsonContent) . " bytes)", $logFile);
-        } else {
-            chunkLog("❌ ERROR: No se pudo guardar archivo de progreso", $logFile);
-        }
-    } else {
-        chunkLog("❌ ERROR: No se pudo codificar JSON del progreso", $logFile);
-    }
+    @file_put_contents($progressFile, $jsonContent);
 
     cleanOutputAndJson([
         'success' => true,
