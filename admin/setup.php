@@ -9010,7 +9010,7 @@ async function downloadChunksSequentially(chunks, index) {
     document.getElementById('progressBar').style.width = `${progressPercent}%`;
 
     try {
-        const response = await fetch(`scripts/download_backup.php?file=${chunk.file_name}&backup_id=${chunk.backup_id}&t=${Date.now()}`);
+        const response = await fetch(`../scripts/download_backup.php?file=${chunk.file_name}&backup_id=${chunk.backup_id}&t=${Date.now()}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const blob = await response.blob();
@@ -9070,7 +9070,7 @@ function updateBackupStats() {
 }
 
 function loadAvailableChunks() {
-    fetch('<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/cleanup_chunks.php'; ?>?action=list&t=' + Date.now())
+    fetch('../scripts/cleanup_chunks.php?action=list&t=' + Date.now())
         .then(response => response.json())
         .then(data => {
             if (data.success && data.chunks.length > 0) {
@@ -9188,7 +9188,7 @@ function addChunksToTable(chunks) {
         const actionsCell = document.createElement('td');
         actionsCell.className = 'right';
         actionsCell.innerHTML = `
-            <a class="butAction" href="<?php echo 'http://localhost/dolibarr/custom/filemanager/scripts/descargar_backup.php'; ?>?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}"
+            <a class="butAction" href="../scripts/descargar_backup.php?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}"
                title="Descargar este chunk" target="_blank">
                 <i class="fas fa-download"></i> Descargar
             </a>
@@ -9219,7 +9219,7 @@ function deleteSingleChunk(event, backupId, chunkNumber, fileName) {
     deleteButton.style.pointerEvents = 'none';
 
     // Enviar solicitud de eliminación
-    const url = 'scripts/cleanup_chunks.php?action=delete&t=' + Date.now();
+    const url = '../scripts/cleanup_chunks.php?action=delete&t=' + Date.now();
     const fullUrl = window.location.origin + '/dolibarr/custom/filemanager/' + url;
     console.log('Eliminando chunk:', fileName);
     console.log('URL relativa:', url);
