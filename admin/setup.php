@@ -1,13 +1,13 @@
 <?php
 /**
- * Setup del módulo FileManager - Versión funcional
+ * Setup del modulo FileManager - Version funcional
  */
 
 // Incluir el entorno de Dolibarr
 require_once '../../../main.inc.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 
-// ========== VERIFICACIÓN DE SEGURIDAD 1: MÓDULO ACTIVADO ==========
+// ========== VERIFICACION DE SEGURIDAD 1: MODULO ACTIVADO ==========
 if (empty($conf->global->MAIN_MODULE_FILEMANAGER)) {
     // Módulo desactivado - mostrar página de error
     llxHeader('', 'FileManager - Módulo Desactivado');
