@@ -84,12 +84,30 @@ try {
                     $size = filesize($chunkFile);
                     $modified = filemtime($chunkFile);
 
+                    // Intentar obtener información detallada del archivo de estado
+                    $fileCount = 0;
+                    $chunkStateFile = $backupDir . '/chunk_state_' . $chunkBackupId . '.json';
+
+                    if (file_exists($chunkStateFile)) {
+                        $chunkState = json_decode(file_get_contents($chunkStateFile), true);
+                        if ($chunkState && isset($chunkState['chunk_zips'])) {
+                            // Buscar este chunk específico en el estado
+                            foreach ($chunkState['chunk_zips'] as $chunkInfo) {
+                                if ($chunkInfo['number'] == $chunkNumber) {
+                                    $fileCount = $chunkInfo['files'] ?? 0;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     $chunks[] = [
                         'backup_id' => $chunkBackupId,
                         'chunk_number' => $chunkNumber,
                         'file_name' => $fileName,
                         'size_bytes' => $size,
                         'size_mb' => round($size / 1024 / 1024, 2),
+                        'file_count' => $fileCount,
                         'modified' => $modified,
                         'modified_formatted' => date('Y-m-d H:i:s', $modified)
                     ];

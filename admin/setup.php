@@ -6195,7 +6195,7 @@ function checkExistingBackups() {
                         file: chunk.file_name,
                         number: chunk.chunk_number,
                         size_mb: chunk.size_mb,
-                        files: 0 // No tenemos información de archivos por chunk en cleanup_chunks.php
+                        files: chunk.file_count || 0 // Ahora incluimos el conteo real de archivos
                     }));
 
                     console.log('📦 Mostrando botones de descarga para backup', backupId, 'con', chunks.length, 'chunks');
