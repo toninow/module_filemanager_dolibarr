@@ -21,6 +21,9 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 
+// DEBUG: Log inicial para confirmar ejecución
+file_put_contents(__DIR__ . '/../backups/debug_init.log', date('Y-m-d H:i:s') . " - Script ejecutado con action: " . ($_GET['action'] ?? 'none') . "\n", FILE_APPEND);
+
 // Iniciar buffer de salida para capturar cualquier HTML
 ob_start();
 
@@ -901,8 +904,10 @@ if ($action === 'init' || $action === 'continue_listing') {
         // VERIFICAR ANÁLISIS PREVIO Y CHECKPOINTS
         chunkLog("🔍 INICIANDO VERIFICACIÓN DE ANÁLISIS PREVIO", $logFile);
         chunkLog("   Archivo buscado: $preAnalyzedFile", $logFile);
+        chunkLog("   Archivo existe: " . (file_exists($preAnalyzedFile) ? 'SÍ' : 'NO'), $logFile);
 
-        if (file_exists($preAnalyzedFile)) {
+        // FORZAR ANÁLISIS DINÁMICO PARA DEBUG - COMENTAR ESTA LÍNEA EN PRODUCCIÓN
+        if (file_exists($preAnalyzedFile . '.debug')) {
             chunkLog("✅ Archivo de análisis previo ENCONTRADO", $logFile);
             chunkLog("📂 Buscando análisis previo dinámico...", $logFile);
             $preAnalyzedData = @json_decode(@file_get_contents($preAnalyzedFile), true);
@@ -1023,7 +1028,7 @@ if ($action === 'init' || $action === 'continue_listing') {
             // NO HAY ANÁLISIS PREVIO - EMPEZAR DE NUEVO
             chunkLog("📂 Iniciando análisis dinámico desde cero...", $logFile);
             chunkLog("   🎯 Se guardarán checkpoints para reanudación automática", $logFile);
-            chunkLog("   ❌ No existe archivo de análisis previo", $logFile);
+            chunkLog("   ✅ EJECUTANDO ANÁLISIS DINÁMICO (DEBUG MODE)", $logFile);
             $allFiles = [];
             $dirsToScan = [$dolibarrRoot];
             $scannedDirs = [];
