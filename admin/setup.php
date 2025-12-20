@@ -1365,31 +1365,52 @@ print load_fiche_titre('🗂️ Backups y Chunks Disponibles', '', 'title_setup'
 print '<div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">';
 print '<div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">';
 print '<div style="display: flex; align-items: center; gap: 10px;">';
-print '<label style="font-weight: 600; color: #495057;"><i class="fas fa-filter"></i> Mostrar:</label>';
-print '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">';
-print '<input type="radio" name="backupFilter" value="all" checked onclick="filterBackups(\'all\')"> Todos';
-print '</label>';
-print '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">';
-print '<input type="radio" name="backupFilter" value="backups" onclick="filterBackups(\'backups\')"> Backups Completos';
-print '</label>';
-print '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">';
-print '<input type="radio" name="backupFilter" value="chunks" onclick="filterBackups(\'chunks\')"> Chunks Disponibles';
-print '</label>';
+print '<label style="font-weight: 600; color: #495057;"><i class="fas fa-filter"></i> Filtrar por Backup ID:</label>';
+print '<select id="backupIdFilter" onchange="filterByBackupId(this.value)" style="padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">';
+print '<option value="all">Todos los backups</option>';
+print '</select>';
 print '</div>';
 print '<div id="backupStats" style="color: #6c757d; font-size: 14px;">Cargando...</div>';
+print '</div>';
+print '</div>';
+
+// Botón de descarga múltiple y barra de progreso
+print '<div style="margin-bottom: 15px;">';
+print '<button onclick="downloadSelectedChunks()" class="btn btn-primary" id="downloadSelectedBtn" style="display:none;">';
+print '<i class="fas fa-download"></i> Descargar Seleccionados (<span id="selectedCount">0</span>)';
+print '</button>';
+print '<button onclick="selectAllChunks()" class="btn btn-secondary" style="margin-left: 10px;">';
+print '<i class="fas fa-check-square"></i> Seleccionar Todos';
+print '</button>';
+print '<button onclick="clearSelection()" class="btn btn-light" style="margin-left: 10px;">';
+print '<i class="fas fa-times"></i> Limpiar Selección';
+print '</button>';
+print '</div>';
+
+// Barra de progreso
+print '<div id="downloadProgress" style="display:none; margin-bottom: 15px;">';
+print '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #dee2e6;">';
+print '<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">';
+print '<span id="progressText">Descargando...</span>';
+print '<span id="progressPercent">0%</span>';
+print '</div>';
+print '<div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px;">';
+print '<div id="progressBar" style="width: 0%; height: 100%; background: #007bff; border-radius: 10px; transition: width 0.3s ease;"></div>';
+print '</div>';
 print '</div>';
 print '</div>';
 
 print '<div class="div-table-responsive">';
 print '<table class="liste centpercent">';
 print '<tr class="liste_titre">';
+print '<th style="width: 30px;"><input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes()"></th>';
 print '<th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Fecha</th><th class="right">Acciones</th>';
 print '</tr>';
 
 print '<tbody id="backupTableBody">';
 
 if (empty($backups)) {
-    print '<tr class="oddeven backup-row"><td colspan="5" class="opacitymedium center">No hay backups disponibles</td></tr>';
+    print '<tr class="oddeven backup-row"><td colspan="6" class="opacitymedium center">No hay backups disponibles</td></tr>';
 } else {
     $var=true;
     foreach ($backups as $b) {
@@ -8885,28 +8906,131 @@ function finalizeBackupAfterChunkDecision() {
 let allBackupItems = [];
 let currentFilter = 'all';
 
-function filterBackups(filterType) {
-    currentFilter = filterType;
-    const rows = document.querySelectorAll('#backupTableBody tr');
+function filterByBackupId(backupId) {
+    const rows = document.querySelectorAll('#backupTableBody tr.chunk-row');
 
     rows.forEach(row => {
-        const isChunk = row.classList.contains('chunk-row');
-        const isBackup = row.classList.contains('backup-row');
-
-        switch (filterType) {
-            case 'all':
-                row.style.display = '';
-                break;
-            case 'backups':
-                row.style.display = isBackup ? '' : 'none';
-                break;
-            case 'chunks':
-                row.style.display = isChunk ? '' : 'none';
-                break;
-        }
+        const rowBackupId = row.getAttribute('data-backup-id');
+        row.style.display = (backupId === 'all' || rowBackupId === backupId) ? '' : 'none';
     });
 
     updateBackupStats();
+}
+
+function selectAllChunks() {
+    const checkboxes = document.querySelectorAll('.chunk-checkbox');
+    const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+        const row = cb.closest('tr');
+        return row.style.display !== 'none';
+    });
+
+    const allChecked = visibleCheckboxes.every(cb => cb.checked);
+    visibleCheckboxes.forEach(cb => cb.checked = !allChecked);
+
+    updateSelectedCount();
+}
+
+function clearSelection() {
+    document.querySelectorAll('.chunk-checkbox').forEach(cb => cb.checked = false);
+    updateSelectedCount();
+}
+
+function toggleAllCheckboxes() {
+    const masterCheckbox = document.getElementById('selectAllCheckbox');
+    const checkboxes = document.querySelectorAll('.chunk-checkbox');
+
+    checkboxes.forEach(cb => {
+        const row = cb.closest('tr');
+        if (row.style.display !== 'none') {
+            cb.checked = masterCheckbox.checked;
+        }
+    });
+
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const selectedCount = document.querySelectorAll('.chunk-checkbox:checked').length;
+    const btn = document.getElementById('downloadSelectedBtn');
+    const countSpan = document.getElementById('selectedCount');
+
+    if (selectedCount > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.textContent = selectedCount;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+async function downloadSelectedChunks() {
+    const selectedCheckboxes = document.querySelectorAll('.chunk-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Selecciona al menos un chunk para descargar');
+        return;
+    }
+
+    if (!confirm(`¿Descargar ${selectedCheckboxes.length} chunk(s) seleccionados?\n\nSe descargarán uno por uno automáticamente.`)) {
+        return;
+    }
+
+    const chunks = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.getAttribute('data-chunk')));
+
+    // Mostrar barra de progreso
+    document.getElementById('downloadProgress').style.display = 'block';
+
+    await downloadChunksSequentially(chunks, 0);
+}
+
+async function downloadChunksSequentially(chunks, index) {
+    if (index >= chunks.length) {
+        // Descarga completada
+        document.getElementById('progressText').textContent = '¡Descarga completada!';
+        document.getElementById('progressPercent').textContent = '100%';
+        document.getElementById('progressBar').style.width = '100%';
+
+        setTimeout(() => {
+            document.getElementById('downloadProgress').style.display = 'none';
+            // Limpiar selección después de completar
+            clearSelection();
+        }, 3000);
+        return;
+    }
+
+    const chunk = chunks[index];
+    const progressPercent = Math.round(((index + 1) / chunks.length) * 100);
+
+    document.getElementById('progressText').textContent = `Descargando Chunk #${chunk.chunk_number} (${chunk.file_name})`;
+    document.getElementById('progressPercent').textContent = `${progressPercent}%`;
+    document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
+    try {
+        const response = await fetch(`scripts/download_backup.php?file=${chunk.file_name}&backup_id=${chunk.backup_id}&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = chunk.file_name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        // Descargar siguiente chunk después de 1 segundo
+        setTimeout(() => {
+            downloadChunksSequentially(chunks, index + 1);
+        }, 1000);
+
+    } catch (error) {
+        console.error('Error descargando chunk:', error);
+        document.getElementById('progressText').textContent = `Error en Chunk #${chunk.chunk_number}: ${error.message}`;
+
+        // Continuar con el siguiente chunk después de 2 segundos
+        setTimeout(() => {
+            downloadChunksSequentially(chunks, index + 1);
+        }, 2000);
+    }
 }
 
 function updateBackupStats() {
@@ -8959,6 +9083,8 @@ function loadAvailableChunks() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.chunks.length > 0) {
+                // Actualizar el filtro de backup IDs
+                updateBackupIdFilter(data.chunks);
                 addChunksToTable(data.chunks);
             }
             // Actualizar estadísticas después de cargar chunks
@@ -8971,6 +9097,26 @@ function loadAvailableChunks() {
         });
 }
 
+function updateBackupIdFilter(chunks) {
+    const backupIds = [...new Set(chunks.map(chunk => chunk.backup_id))];
+    const filterSelect = document.getElementById('backupIdFilter');
+
+    if (!filterSelect) return;
+
+    // Limpiar opciones existentes excepto "Todos los backups"
+    while (filterSelect.options.length > 1) {
+        filterSelect.remove(1);
+    }
+
+    // Agregar opciones para cada backup ID
+    backupIds.forEach(id => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `Backup ${id}`;
+        filterSelect.appendChild(option);
+    });
+}
+
 function addChunksToTable(chunks) {
     const tableBody = document.getElementById('backupTableBody');
     if (!tableBody) return;
@@ -8979,6 +9125,12 @@ function addChunksToTable(chunks) {
         const row = document.createElement('tr');
         row.className = 'oddeven chunk-row';
         row.setAttribute('data-type', 'chunk');
+        row.setAttribute('data-backup-id', chunk.backup_id);
+
+        // Checkbox de selección
+        const checkboxCell = document.createElement('td');
+        checkboxCell.innerHTML = `<input type="checkbox" class="chunk-checkbox" value="${chunk.file_name}" data-chunk="${JSON.stringify(chunk).replace(/"/g, '&quot;')}">`;
+        row.appendChild(checkboxCell);
 
         // Nombre del archivo
         const nameCell = document.createElement('td');
@@ -9036,6 +9188,24 @@ function deleteSingleChunk(backupId, chunkNumber, fileName) {
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     loadAvailableChunks(); // updateBackupStats se llama dentro de loadAvailableChunks después de cargar
+});
+
+// Event listener para actualizar contador de seleccionados
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('chunk-checkbox')) {
+        updateSelectedCount();
+
+        // Actualizar checkbox maestro
+        const masterCheckbox = document.getElementById('selectAllCheckbox');
+        const visibleCheckboxes = Array.from(document.querySelectorAll('.chunk-checkbox')).filter(cb => {
+            const row = cb.closest('tr');
+            return row.style.display !== 'none';
+        });
+
+        const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+        masterCheckbox.checked = visibleCheckboxes.length > 0 && checkedVisible.length === visibleCheckboxes.length;
+        masterCheckbox.indeterminate = checkedVisible.length > 0 && checkedVisible.length < visibleCheckboxes.length;
+    }
 });
 
 // ========== FIN FILTROS Y GESTIÓN DE CHUNKS ==========
