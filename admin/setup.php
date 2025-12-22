@@ -3969,7 +3969,7 @@ function proceedWithAnalysis(type) {
                 // Actualizar UI con datos válidos (siempre actualizar cuando hay datos válidos)
                 if (data && data.success) {
                     // Datos válidos recibidos - actualizar UI
-                    updateProgressUI(data);
+                        updateProgressUI(data);
                 } else {
                     // Waiting for data logs removed for performance
                 }
@@ -3998,7 +3998,7 @@ function proceedWithAnalysis(type) {
             })
             .then(data => {
                 if (data && data.success) {
-
+                    
                     // IGNORAR datos antiguos SOLO si:
                     // 1. El análisis está corriendo (datos intermedios antiguos podrían ser irrelevantes)
                     // 2. O son datos vacíos/completados sin resultados
@@ -4008,11 +4008,11 @@ function proceedWithAnalysis(type) {
 
                     // PERMITIR siempre datos completados válidos (con resultados)
                     const isCompletedValidData = !data.running && data.stats && data.stats.total_files > 0;
-
+                    
                     if (isOldData && pollCount % 10 === 0) {
                         console.warn('⚠️ [DEBUG] Poll #' + pollCount + ' - Datos antiguos detectados durante análisis en curso (hace ' + timeSinceUpdate + 's), ignorando...');
                     }
-
+                    
                     // Actualizar UI si está corriendo, son datos recientes, o son datos completados válidos
                     if (data.running || !isOldData || isCompletedValidData) {
                         updateProgressUI(data);
@@ -4022,7 +4022,7 @@ function proceedWithAnalysis(type) {
                             // Keeping values at 0 (old irrelevant data ignored) - debug logs removed for performance
                         }
                     }
-
+                    
                     if (!data.running && data.stats && data.stats.total_files > 0) {
                         // Análisis completado (solo si no son datos antiguos)
                         
@@ -4304,7 +4304,7 @@ function proceedWithAnalysis(type) {
                     // Continuar automáticamente
                     setTimeout(() => {
         const analyzeFilesUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/analyze_files.php';
-        fetch(analyzeFilesUrl, {
+                        fetch(analyzeFilesUrl, {
                             method: 'POST',
                             credentials: 'same-origin',
                             headers: {
@@ -4674,9 +4674,9 @@ function cancelAnalysis() {
         }
 
         // Continuar con la limpieza normal de UI
-        stopAnalysisLoader();
-        document.getElementById('previewPanel').style.display = 'none';
-        document.getElementById('statsContent').innerHTML = '';
+    stopAnalysisLoader();
+    document.getElementById('previewPanel').style.display = 'none';
+    document.getElementById('statsContent').innerHTML = '';
 
         // Mostrar mensaje de cancelación exitosa
         if (cleanupData.files_cleaned > 0) {
@@ -4686,7 +4686,7 @@ function cancelAnalysis() {
         }
 
         // Restaurar todos los botones
-        restoreAllBackupButtons();
+    restoreAllBackupButtons();
     })
     .catch(error => {
         console.error('Error en cancelación:', error);
@@ -4697,65 +4697,6 @@ function cancelAnalysis() {
         restoreAllBackupButtons();
     });
 }
-
-// Función helper para mostrar mensajes temporales
-function showTemporaryMessage(message, type = 'info') {
-    // Crear contenedor si no existe
-    let messageContainer = document.getElementById('tempMessageContainer');
-    if (!messageContainer) {
-        messageContainer = document.createElement('div');
-        messageContainer.id = 'tempMessageContainer';
-        messageContainer.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 400px;
-        `;
-        document.body.appendChild(messageContainer);
-    }
-
-    // Crear mensaje
-    const messageDiv = document.createElement('div');
-    messageDiv.style.cssText = `
-        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
-        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
-        padding: 15px 20px;
-        border-radius: 8px;
-        border-left: 4px solid ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        margin-bottom: 10px;
-        font-weight: 500;
-        animation: slideInRight 0.3s ease-out;
-    `;
-
-    messageDiv.innerHTML = message;
-    messageContainer.appendChild(messageDiv);
-
-    // Auto-remover después de 5 segundos
-    setTimeout(() => {
-        messageDiv.style.animation = 'slideOutRight 0.3s ease-in';
-        setTimeout(() => {
-            if (messageDiv.parentNode) {
-                messageDiv.parentNode.removeChild(messageDiv);
-            }
-        }, 300);
-    }, 5000);
-}
-
-// Agregar estilos de animación para mensajes temporales
-const tempMessageStyle = document.createElement('style');
-tempMessageStyle.textContent = `
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-@keyframes slideOutRight {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(100%); opacity: 0; }
-}
-`;
-document.head.appendChild(tempMessageStyle);
 
 // ============================================================
 // BACKUP POR CHUNKS - Funciona en CUALQUIER hosting
@@ -5216,7 +5157,7 @@ async function startChunkedBackup() {
         const filesFound = initData.files_found || totalFiles;
         const expectedFromAnalysis = initData.expected_from_analysis;
         let processed = initData.processed || 0;
-
+        
         currentBackupId = backupId;
 
         // ACTUALIZAR UI INMEDIATAMENTE con los datos del análisis
@@ -5745,7 +5686,7 @@ async function startChunkedBackup() {
         
         const finalElapsed = Math.round((Date.now() - startTime) / 1000);
         const finalElapsedStr = finalElapsed < 60 ? finalElapsed + 's' : Math.floor(finalElapsed/60) + 'm ' + Math.round(finalElapsed%60) + 's';
-
+        
         // El sistema combina todos los chunks en un solo ZIP final
         addLog('🏁 Finalizando backup (combinando chunks en ZIP final)...');
         updateBar(98, '🏁 Finalizando y combinando chunks...', finalElapsedStr, 'calculando...');
@@ -9059,7 +9000,7 @@ function filterByBackupId(backupId) {
             row.style.display = (backupId === 'all' || rowBackupId === backupId) ? '' : 'none';
         } else {
             // Filas sin data-backup-id (como mensajes de error) siempre visibles
-            row.style.display = '';
+                row.style.display = '';
         }
     });
 
@@ -9252,7 +9193,7 @@ function updateBackupStats() {
                 if (!isNaN(sizeMB)) {
                     totalSizeAll += sizeMB;
                     if (fileType === 'chunk') {
-                        totalChunks++;
+                totalChunks++;
                         totalSizeChunks += sizeMB;
                     }
                 }
@@ -9526,8 +9467,8 @@ function addFilesToTable(files) {
         if (['chunk', 'filelist', 'backup_log', 'debug_log'].includes(file.type)) {
             if (file.type === 'chunk') {
                 actionsHtml += `<a class="butAction" href="../scripts/descargar_backup.php?action=descargar&chunk=${file.chunk_number}&t=${Date.now()}"
-                   title="Descargar este chunk" target="_blank">
-                    <i class="fas fa-download"></i> Descargar
+               title="Descargar este chunk" target="_blank">
+                <i class="fas fa-download"></i> Descargar
                 </a>`;
             }
         }
@@ -9887,6 +9828,65 @@ document.addEventListener('change', function(e) {
 });
 
 // ========== FIN FILTROS Y GESTIÓN DE CHUNKS ==========
+
+// Función helper para mostrar mensajes temporales
+function showTemporaryMessage(message, type = 'info') {
+    // Crear contenedor si no existe
+    let messageContainer = document.getElementById('tempMessageContainer');
+    if (!messageContainer) {
+        messageContainer = document.createElement('div');
+        messageContainer.id = 'tempMessageContainer';
+        messageContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(messageContainer);
+    }
+
+    // Crear mensaje
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        padding: 15px 20px;
+        border-radius: 8px;
+        border-left: 4px solid ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-bottom: 10px;
+        font-weight: 500;
+        animation: slideInRight 0.3s ease-out;
+    `;
+
+    messageDiv.innerHTML = message;
+    messageContainer.appendChild(messageDiv);
+
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 300);
+    }, 5000);
+}
+
+// Agregar estilos de animación para mensajes temporales
+const tempMessageStyle = document.createElement('style');
+tempMessageStyle.textContent = `
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+`;
+document.head.appendChild(tempMessageStyle);
 
 </script>
 
