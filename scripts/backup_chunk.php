@@ -494,8 +494,8 @@ if (!is_dir($backupDir)) {
 // Verificar permisos
 if (!is_dir($backupDir)) {
     cleanOutputAndJson([
-        'success' => false, 
-        'error' => 'No se puede crear el directorio de backups: ' . $backupDir . ' | __DIR__: ' . __DIR__
+        'success' => false,
+        'error' => 'No se pueden crear los archivos necesarios para el backup. Contacta al administrador del servidor para configurar los permisos adecuados.'
     ]);
 }
 
@@ -533,14 +533,8 @@ if (!is_writable($backupDir)) {
         }
         
         cleanOutputAndJson([
-            'success' => false, 
-            'error' => 'Directorio de backups no escribible: ' . $backupDir . 
-                      ' | Permisos: ' . substr(sprintf('%o', $currentPerms), -4) . 
-                      ' | Owner: ' . $ownerName . 
-                      ' | Group: ' . $groupName .
-                      ' | __DIR__: ' . __DIR__ .
-                      ' | PHP User: ' . (function_exists('posix_getpwuid') ? posix_getpwuid(getmyuid())['name'] : 'unknown') .
-                      ' | Solución: Ejecuta: sudo chown -R www-data:www-data ' . $backupDir . ' && sudo chmod -R 777 ' . $backupDir
+            'success' => false,
+            'error' => 'No hay permisos suficientes para guardar los archivos del backup. Contacta al administrador del servidor para configurar los permisos adecuados.'
         ]);
     }
 }
