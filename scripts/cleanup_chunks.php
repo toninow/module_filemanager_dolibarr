@@ -144,15 +144,25 @@ try {
                     $fileInfo['type'] = 'backup_progress';
                     $fileInfo['backup_id'] = $matches[1];
 
-                } elseif (preg_match('/filelist_([^_]+)\.json/', $fileName, $matches)) {
-                    // Lista de archivos
+                } elseif (preg_match('/filelist_[^.]+\.json/', $fileName)) {
+                    // Lista de archivos (incluyendo comprimidos)
                     $fileInfo['type'] = 'filelist';
-                    $fileInfo['backup_id'] = $matches[1];
+                    // Extraer backup_id de nombres como filelist_20251222_110811.json.compressed
+                    if (preg_match('/filelist_([^_]+)_([^.]+)\.json/', $fileName, $matches)) {
+                        $fileInfo['backup_id'] = $matches[1] . '_' . $matches[2];
+                    } else {
+                        $fileInfo['backup_id'] = 'unknown';
+                    }
 
                 } elseif (preg_match('/backup_([^_]+)\.log$/', $fileName, $matches)) {
                     // Logs de backup
                     $fileInfo['type'] = 'backup_log';
                     $fileInfo['backup_id'] = $matches[1];
+
+                } elseif (preg_match('/pre_analyzed_files\.json/', $fileName)) {
+                    // Archivo de análisis preprocesado
+                    $fileInfo['type'] = 'pre_analyzed';
+                    $fileInfo['backup_id'] = 'system'; // Sistema global
 
                 } elseif (preg_match('/\.auth_token_[^_]*\.json$/', $fileName)) {
                     // Tokens de autenticación

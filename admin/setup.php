@@ -9070,19 +9070,21 @@ function filterByBackupId(backupId) {
 
 function selectAllChunks() {
     const checkboxes = document.querySelectorAll('.chunk-checkbox');
-    const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+    const visibleEnabledCheckboxes = Array.from(checkboxes).filter(cb => {
         const row = cb.closest('tr');
-        return row.style.display !== 'none';
+        return row.style.display !== 'none' && !cb.disabled;
     });
 
-    const allChecked = visibleCheckboxes.every(cb => cb.checked);
-    visibleCheckboxes.forEach(cb => cb.checked = !allChecked);
+    if (visibleEnabledCheckboxes.length === 0) return; // No hay checkboxes que seleccionar
+
+    const allChecked = visibleEnabledCheckboxes.every(cb => cb.checked);
+    visibleEnabledCheckboxes.forEach(cb => cb.checked = !allChecked);
 
     updateSelectedCount();
 }
 
 function clearSelection() {
-    document.querySelectorAll('.chunk-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.chunk-checkbox:not([disabled])').forEach(cb => cb.checked = false);
     updateSelectedCount();
 }
 
@@ -9430,7 +9432,7 @@ function addFilesToTable(files) {
 
         // Checkbox de selección (solo para tipos que se pueden eliminar)
         const checkboxCell = document.createElement('td');
-        const canDelete = ['chunk', 'chunk_state', 'backup_progress', 'filelist', 'backup_log', 'auth_token'].includes(file.type);
+        const canDelete = ['chunk', 'chunk_state', 'backup_progress', 'filelist', 'backup_log', 'auth_token', 'pre_analyzed'].includes(file.type);
         if (canDelete) {
             checkboxCell.innerHTML = `<input type="checkbox" class="chunk-checkbox" value="${file.file_name}" data-chunk="${JSON.stringify(file).replace(/"/g, '&quot;')}" data-backup-id="${file.backup_id}" data-file-name="${file.file_name}" data-file-type="${file.type}">`;
         } else {
@@ -9458,6 +9460,9 @@ function addFilesToTable(files) {
                 break;
             case 'auth_token':
                 iconHtml = '<i class="fas fa-key" style="color: #fd7e14;"></i>';
+                break;
+            case 'pre_analyzed':
+                iconHtml = '<i class="fas fa-search" style="color: #e83e8c;"></i>';
                 break;
             default:
                 iconHtml = '<i class="fas fa-file" style="color: #6c757d;"></i>';
@@ -9489,6 +9494,9 @@ function addFilesToTable(files) {
                 break;
             case 'auth_token':
                 typeText = '<span style="color: #fd7e14;"><i class="fas fa-key"></i> Token Auth</span>';
+                break;
+            case 'pre_analyzed':
+                typeText = '<span style="color: #e83e8c;"><i class="fas fa-search"></i> Análisis Previo</span>';
                 break;
             default:
                 typeText = '<span style="color: #6c757d;"><i class="fas fa-question"></i> Desconocido</span>';
