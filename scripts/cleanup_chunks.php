@@ -86,68 +86,122 @@ try {
         }
 
     } elseif ($action === 'list') {
-        // Listar chunks disponibles
+        // Listar chunks y archivos relacionados disponibles
         $backupDir = DOL_DOCUMENT_ROOT.'/custom/filemanager/backups';
 
-        $chunks = [];
+        $files = [];
 
         if (is_dir($backupDir)) {
-            $chunkFiles = glob($backupDir . '/chunk_*.zip');
+            // Buscar todos los archivos relevantes
+            $allFiles = glob($backupDir . '/*');
 
-            foreach ($chunkFiles as $chunkFile) {
-                $fileName = basename($chunkFile);
+            foreach ($allFiles as $filePath) {
+                if (!is_file($filePath)) continue;
 
-                // Parsear información del chunk
+                $fileName = basename($filePath);
+                $size = filesize($filePath);
+                $modified = filemtime($filePath);
+
+                $fileInfo = [
+                    'file_name' => $fileName,
+                    'size_bytes' => $size,
+                    'size_mb' => round($size / 1024 / 1024, 2),
+                    'modified' => $modified,
+                    'modified_formatted' => date('Y-m-d H:i:s', $modified)
+                ];
+
+                // Clasificar archivos por tipo y extraer backup_id
                 if (preg_match('/chunk_([^_]+)_(\d+)\.zip$/', $fileName, $matches)) {
-                    $chunkBackupId = $matches[1];
-                    $chunkNumber = (int)$matches[2];
-                    $size = filesize($chunkFile);
-                    $modified = filemtime($chunkFile);
+                    // Chunks ZIP
+                    $fileInfo['type'] = 'chunk';
+                    $fileInfo['backup_id'] = $matches[1];
+                    $fileInfo['chunk_number'] = (int)$matches[2];
 
-                    // Intentar obtener información detallada del archivo de estado
+                    // Obtener información detallada del archivo de estado
                     $fileCount = 0;
-                    $chunkStateFile = $backupDir . '/chunk_state_' . $chunkBackupId . '.json';
-
+                    $chunkStateFile = $backupDir . '/chunk_state_' . $fileInfo['backup_id'] . '.json';
                     if (file_exists($chunkStateFile)) {
                         $chunkState = json_decode(file_get_contents($chunkStateFile), true);
                         if ($chunkState && isset($chunkState['chunk_zips'])) {
-                            // Buscar este chunk específico en el estado
                             foreach ($chunkState['chunk_zips'] as $chunkInfo) {
-                                if ($chunkInfo['number'] == $chunkNumber) {
+                                if ($chunkInfo['number'] == $fileInfo['chunk_number']) {
                                     $fileCount = $chunkInfo['files'] ?? 0;
                                     break;
                                 }
                             }
                         }
                     }
+                    $fileInfo['file_count'] = $fileCount;
 
-                    $chunks[] = [
-                        'backup_id' => $chunkBackupId,
-                        'chunk_number' => $chunkNumber,
-                        'file_name' => $fileName,
-                        'size_bytes' => $size,
-                        'size_mb' => round($size / 1024 / 1024, 2),
-                        'file_count' => $fileCount,
-                        'modified' => $modified,
-                        'modified_formatted' => date('Y-m-d H:i:s', $modified)
-                    ];
+                } elseif (preg_match('/chunk_state_([^_]+)\.json$/', $fileName, $matches)) {
+                    // Estados de chunks
+                    $fileInfo['type'] = 'chunk_state';
+                    $fileInfo['backup_id'] = $matches[1];
+
+                } elseif (preg_match('/backup_progress_([^_]+)\.json$/', $fileName, $matches)) {
+                    // Progreso de backup
+                    $fileInfo['type'] = 'backup_progress';
+                    $fileInfo['backup_id'] = $matches[1];
+
+                } elseif (preg_match('/filelist_([^_]+)\.json/', $fileName, $matches)) {
+                    // Lista de archivos
+                    $fileInfo['type'] = 'filelist';
+                    $fileInfo['backup_id'] = $matches[1];
+
+                } elseif (preg_match('/backup_([^_]+)\.log$/', $fileName, $matches)) {
+                    // Logs de backup
+                    $fileInfo['type'] = 'backup_log';
+                    $fileInfo['backup_id'] = $matches[1];
+
+                } elseif (preg_match('/\.auth_token_[^_]*\.json$/', $fileName)) {
+                    // Tokens de autenticación
+                    $fileInfo['type'] = 'auth_token';
+                    $fileInfo['backup_id'] = 'system'; // No asociado a backup específico
+
+                } elseif (preg_match('/debug_.*\.log$/', $fileName)) {
+                    // Logs de debug
+                    $fileInfo['type'] = 'debug_log';
+                    $fileInfo['backup_id'] = 'system'; // No asociado a backup específico
+
+                } else {
+                    // Otros archivos no clasificados
+                    $fileInfo['type'] = 'other';
+                    $fileInfo['backup_id'] = 'unknown';
                 }
+
+                $files[] = $fileInfo;
             }
 
-            // Ordenar por backup_id y luego por chunk_number
-            usort($chunks, function($a, $b) {
-                if ($a['backup_id'] !== $b['backup_id']) {
-                    return strcmp($b['backup_id'], $a['backup_id']); // Más reciente primero
+            // Ordenar por tipo, luego por backup_id, luego por nombre
+            usort($files, function($a, $b) {
+                // Primero por tipo (chunks primero)
+                $typeOrder = ['chunk' => 1, 'chunk_state' => 2, 'backup_progress' => 3,
+                             'filelist' => 4, 'backup_log' => 5, 'debug_log' => 6,
+                             'auth_token' => 7, 'other' => 8];
+                $aOrder = $typeOrder[$a['type']] ?? 9;
+                $bOrder = $typeOrder[$b['type']] ?? 9;
+
+                if ($aOrder !== $bOrder) {
+                    return $aOrder <=> $bOrder;
                 }
-                return $a['chunk_number'] <=> $b['chunk_number'];
+
+                // Luego por backup_id (más reciente primero)
+                if ($a['backup_id'] !== $b['backup_id']) {
+                    if ($a['backup_id'] === 'system') return 1;
+                    if ($b['backup_id'] === 'system') return -1;
+                    return strcmp($b['backup_id'], $a['backup_id']);
+                }
+
+                // Finalmente por nombre
+                return strcmp($a['file_name'], $b['file_name']);
             });
         }
 
         echo json_encode([
             'success' => true,
-            'chunks' => $chunks,
-            'total_chunks' => count($chunks),
-            'total_size_mb' => round(array_sum(array_column($chunks, 'size_mb')), 2)
+            'files' => $files, // Cambiar 'chunks' por 'files'
+            'total_files' => count($files),
+            'total_size_mb' => round(array_sum(array_column($files, 'size_mb')), 2)
         ]);
 
     } else {

@@ -9145,30 +9145,30 @@ function updateBackupStats() {
     }
 }
 
-function loadAvailableChunks() {
+function loadAvailableFiles() {
     fetch('../scripts/cleanup_chunks.php?action=list&t=' + Date.now())
         .then(response => response.json())
         .then(data => {
-            if (data.success && data.chunks.length > 0) {
-                // Limpiar la tabla antes de agregar chunks para evitar duplicados
+            if (data.success && data.files.length > 0) {
+                // Limpiar la tabla antes de agregar archivos para evitar duplicados
                 clearBackupTable();
 
                 // Actualizar el filtro de backup IDs
-                updateBackupIdFilter(data.chunks);
-                addChunksToTable(data.chunks);
+                updateBackupIdFilter(data.files);
+                addFilesToTable(data.files);
             } else {
-                // Si no hay chunks, mostrar mensaje vacío
+                // Si no hay archivos, mostrar mensaje vacío
                 clearBackupTable();
                 showEmptyTableMessage();
             }
-            // Actualizar estadísticas después de cargar chunks
+            // Actualizar estadísticas después de cargar archivos
             updateBackupStats();
         })
         .catch(error => {
-            console.error('Error cargando chunks:', error);
+            console.error('Error cargando archivos:', error);
             // Mostrar mensaje de error en la tabla
             clearBackupTable();
-            showErrorTableMessage('Error al cargar chunks: ' + error.message);
+            showErrorTableMessage('Error al cargar archivos: ' + error.message);
             updateBackupStats();
         });
 }
@@ -9194,8 +9194,8 @@ function showErrorTableMessage(message) {
     }
 }
 
-function updateBackupIdFilter(chunks) {
-    const backupIds = [...new Set(chunks.map(chunk => chunk.backup_id))];
+function updateBackupIdFilter(files) {
+    const backupIds = [...new Set(files.map(file => file.backup_id))];
     const filterSelect = document.getElementById('backupIdFilter');
 
     if (!filterSelect) return;
@@ -9209,11 +9209,19 @@ function updateBackupIdFilter(chunks) {
     allOption.textContent = 'Todos los backups';
     filterSelect.appendChild(allOption);
 
-    // Agregar opciones para cada backup ID
-    backupIds.forEach(id => {
+    // Agregar opción "Sistema" para archivos del sistema
+    if (backupIds.includes('system')) {
+        const systemOption = document.createElement('option');
+        systemOption.value = 'system';
+        systemOption.textContent = 'Sistema';
+        filterSelect.appendChild(systemOption);
+    }
+
+    // Agregar backups específicos
+    backupIds.filter(id => id !== 'system' && id !== 'unknown').sort().reverse().forEach(backupId => {
         const option = document.createElement('option');
-        option.value = id;
-        option.textContent = `Backup ${id}`;
+        option.value = backupId;
+        option.textContent = `Backup ${backupId}`;
         filterSelect.appendChild(option);
     });
 
@@ -9225,55 +9233,124 @@ function updateBackupIdFilter(chunks) {
     }
 }
 
-function addChunksToTable(chunks) {
+function addFilesToTable(files) {
     const tableBody = document.getElementById('backupTableBody');
     if (!tableBody) return;
 
-    chunks.forEach(chunk => {
+    files.forEach(file => {
         const row = document.createElement('tr');
-        row.className = 'oddeven chunk-row';
-        row.setAttribute('data-type', 'chunk');
-        row.setAttribute('data-backup-id', chunk.backup_id);
+        row.className = 'oddeven file-row';
+        row.setAttribute('data-type', file.type);
+        row.setAttribute('data-backup-id', file.backup_id);
 
-        // Checkbox de selección
+        // Checkbox de selección (solo para tipos que se pueden eliminar)
         const checkboxCell = document.createElement('td');
-        checkboxCell.innerHTML = `<input type="checkbox" class="chunk-checkbox" value="${chunk.file_name}" data-chunk="${JSON.stringify(chunk).replace(/"/g, '&quot;')}" data-backup-id="${chunk.backup_id}" data-chunk-number="${chunk.chunk_number}" data-file-name="${chunk.file_name}">`;
+        const canDelete = ['chunk', 'chunk_state', 'backup_progress', 'filelist', 'backup_log', 'auth_token'].includes(file.type);
+        if (canDelete) {
+            checkboxCell.innerHTML = `<input type="checkbox" class="chunk-checkbox" value="${file.file_name}" data-chunk="${JSON.stringify(file).replace(/"/g, '&quot;')}" data-backup-id="${file.backup_id}" data-file-name="${file.file_name}" data-file-type="${file.type}">`;
+        } else {
+            checkboxCell.innerHTML = '<input type="checkbox" disabled style="opacity: 0.5;">';
+        }
         row.appendChild(checkboxCell);
 
-        // Nombre del archivo
+        // Nombre del archivo con icono según tipo
         const nameCell = document.createElement('td');
-        nameCell.innerHTML = `<i class="fas fa-file-archive" style="color: #ff6b35;"></i> ${chunk.file_name}`;
+        let iconHtml = '';
+        switch(file.type) {
+            case 'chunk':
+                iconHtml = '<i class="fas fa-file-archive" style="color: #ff6b35;"></i>';
+                break;
+            case 'chunk_state':
+            case 'backup_progress':
+                iconHtml = '<i class="fas fa-database" style="color: #007bff;"></i>';
+                break;
+            case 'filelist':
+                iconHtml = '<i class="fas fa-list" style="color: #28a745;"></i>';
+                break;
+            case 'backup_log':
+            case 'debug_log':
+                iconHtml = '<i class="fas fa-file-alt" style="color: #6f42c1;"></i>';
+                break;
+            case 'auth_token':
+                iconHtml = '<i class="fas fa-key" style="color: #fd7e14;"></i>';
+                break;
+            default:
+                iconHtml = '<i class="fas fa-file" style="color: #6c757d;"></i>';
+        }
+        nameCell.innerHTML = `${iconHtml} ${file.file_name}`;
         row.appendChild(nameCell);
 
-        // Tipo
+        // Tipo descriptivo
         const typeCell = document.createElement('td');
-        typeCell.innerHTML = `<span style="color: #ff6b35;"><i class="fas fa-puzzle-piece"></i> Chunk #${chunk.chunk_number}</span>`;
+        let typeText = '';
+        switch(file.type) {
+            case 'chunk':
+                typeText = `<span style="color: #ff6b35;"><i class="fas fa-puzzle-piece"></i> Chunk #${file.chunk_number || 'N/A'}</span>`;
+                break;
+            case 'chunk_state':
+                typeText = '<span style="color: #007bff;"><i class="fas fa-database"></i> Estado Chunks</span>';
+                break;
+            case 'backup_progress':
+                typeText = '<span style="color: #007bff;"><i class="fas fa-chart-line"></i> Progreso Backup</span>';
+                break;
+            case 'filelist':
+                typeText = '<span style="color: #28a745;"><i class="fas fa-list"></i> Lista Archivos</span>';
+                break;
+            case 'backup_log':
+                typeText = '<span style="color: #6f42c1;"><i class="fas fa-file-alt"></i> Log Backup</span>';
+                break;
+            case 'debug_log':
+                typeText = '<span style="color: #6f42c1;"><i class="fas fa-bug"></i> Debug Log</span>';
+                break;
+            case 'auth_token':
+                typeText = '<span style="color: #fd7e14;"><i class="fas fa-key"></i> Token Auth</span>';
+                break;
+            default:
+                typeText = '<span style="color: #6c757d;"><i class="fas fa-question"></i> Desconocido</span>';
+        }
+        typeCell.innerHTML = typeText;
         row.appendChild(typeCell);
 
         // Tamaño
         const sizeCell = document.createElement('td');
-        sizeCell.textContent = `${chunk.size_mb} MB`;
+        if (file.type === 'chunk' && file.file_count) {
+            sizeCell.textContent = `${file.size_mb} MB (${file.file_count} archivos)`;
+        } else {
+            sizeCell.textContent = `${file.size_mb} MB`;
+        }
         row.appendChild(sizeCell);
 
         // Fecha
         const dateCell = document.createElement('td');
-        dateCell.textContent = chunk.modified_formatted;
+        dateCell.textContent = file.modified_formatted;
         row.appendChild(dateCell);
 
         // Acciones
         const actionsCell = document.createElement('td');
         actionsCell.className = 'right';
-        actionsCell.innerHTML = `
-            <a class="butAction" href="../scripts/descargar_backup.php?action=descargar&chunk=${chunk.chunk_number}&t=${Date.now()}"
-               title="Descargar este chunk" target="_blank">
-                <i class="fas fa-download"></i> Descargar
-            </a>
-            <a class="butActionDelete" href="javascript:void(0)"
-               onclick="deleteSingleChunk(event, '${chunk.backup_id}', ${chunk.chunk_number}, '${chunk.file_name}')"
-               title="Eliminar este chunk">
+
+        let actionsHtml = '';
+
+        // Botón de descarga (solo para algunos tipos)
+        if (['chunk', 'filelist', 'backup_log', 'debug_log'].includes(file.type)) {
+            if (file.type === 'chunk') {
+                actionsHtml += `<a class="butAction" href="../scripts/descargar_backup.php?action=descargar&chunk=${file.chunk_number}&t=${Date.now()}"
+                   title="Descargar este chunk" target="_blank">
+                    <i class="fas fa-download"></i> Descargar
+                </a>`;
+            }
+        }
+
+        // Botón de eliminación (para tipos que se pueden eliminar)
+        if (canDelete) {
+            actionsHtml += `<a class="butActionDelete" href="javascript:void(0)"
+               onclick="deleteSingleFile(event, '${file.backup_id}', '${file.file_name}', '${file.type}')"
+               title="Eliminar este archivo">
                 <i class="fas fa-trash"></i> Eliminar
-            </a>
-        `;
+            </a>`;
+        }
+
+        actionsCell.innerHTML = actionsHtml;
         row.appendChild(actionsCell);
 
         tableBody.appendChild(row);
@@ -9349,14 +9426,60 @@ function deleteSingleChunk(event, backupId, chunkNumber, fileName) {
     });
 }
 
-function deleteSelectedChunks() {
-    const selectedChunks = document.querySelectorAll('.chunk-checkbox:checked');
-    if (selectedChunks.length === 0) {
-        alert('No hay chunks seleccionados para eliminar.');
+function deleteSingleFile(event, backupId, fileName, fileType) {
+    const confirmMessage = `¿Estás seguro de eliminar "${fileName}"?\n\nTipo: ${fileType}\n\nEsta acción no se puede deshacer.`;
+    if (!confirm(confirmMessage)) {
         return;
     }
 
-    const confirmMessage = `¿Estás seguro de eliminar ${selectedChunks.length} chunk(s)?\n\nEsta acción no se puede deshacer.`;
+    const deleteButton = event.target.closest('a');
+    const originalText = deleteButton.innerHTML;
+    deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+    deleteButton.style.pointerEvents = 'none';
+
+    fetch('../scripts/cleanup_chunks.php?action=delete&t=' + Date.now(), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'filename=' + encodeURIComponent(fileName)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`Archivo eliminado correctamente.\n\nEspacio liberado: ${data.space_freed_mb || 0} MB`);
+            const row = deleteButton.closest('tr');
+            row.remove();
+            updateBackupStats();
+            loadAvailableFiles();
+        } else {
+            alert('Error al eliminar el archivo: ' + (data.message || 'Error desconocido'));
+            deleteButton.innerHTML = originalText;
+            deleteButton.style.pointerEvents = 'auto';
+        }
+    })
+    .catch(error => {
+        console.error('Error completo:', error);
+        alert('Error de conexión: ' + error.message);
+        deleteButton.innerHTML = originalText;
+        deleteButton.style.pointerEvents = 'auto';
+    });
+}
+
+function deleteSelectedChunks() {
+    const selectedFiles = document.querySelectorAll('.chunk-checkbox:checked');
+    if (selectedFiles.length === 0) {
+        alert('No hay archivos seleccionados para eliminar.');
+        return;
+    }
+
+    const confirmMessage = `¿Estás seguro de eliminar ${selectedFiles.length} archivo(s)?\n\nEsta acción no se puede deshacer.`;
     if (!confirm(confirmMessage)) {
         return;
     }
@@ -9374,11 +9497,11 @@ function deleteSelectedChunks() {
     }
 
     let completed = 0;
-    const total = selectedChunks.length;
+    const total = selectedFiles.length;
 
-    // Función para procesar chunks secuencialmente
+    // Función para procesar archivos secuencialmente
     function processNext(index) {
-        if (index >= selectedChunks.length) {
+        if (index >= selectedFiles.length) {
             // Todos completados
             if (progressBar) {
                 progressText.textContent = '¡Eliminación completada!';
@@ -9386,13 +9509,13 @@ function deleteSelectedChunks() {
                 progressBarInner.style.width = '100%';
                 setTimeout(() => {
                     progressBar.style.display = 'none';
-                    loadAvailableChunks(); // Recargar la lista
+                    loadAvailableFiles(); // Recargar la lista
                 }, 2000);
             }
             return;
         }
 
-        const checkbox = selectedChunks[index];
+        const checkbox = selectedFiles[index];
         const backupId = checkbox.dataset.backupId;
         const chunkNumber = checkbox.dataset.chunkNumber;
         const fileName = checkbox.dataset.fileName;
@@ -9452,7 +9575,7 @@ function cancelDelete() {
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
-    loadAvailableChunks(); // updateBackupStats se llama dentro de loadAvailableChunks después de cargar
+    loadAvailableFiles(); // updateBackupStats se llama dentro de loadAvailableFiles después de cargar
 });
 
 // Event listener para actualizar contador de seleccionados
