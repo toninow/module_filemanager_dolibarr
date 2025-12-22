@@ -1366,9 +1366,12 @@ print '<div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; bord
 print '<div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">';
 print '<div style="display: flex; align-items: center; gap: 10px;">';
 print '<label style="font-weight: 600; color: #495057;"><i class="fas fa-filter"></i> Filtrar por Backup ID:</label>';
-print '<select id="backupIdFilter" onchange="filterByBackupId(this.value)" style="padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">';
+print '<select id="backupIdFilter" onchange="filterByBackupId(this.value); updateDeleteBackupButton()" style="padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">';
 print '<option value="all">Todos los backups</option>';
 print '</select>';
+print '<button onclick="deleteBackupCompletely(document.getElementById(\'backupIdFilter\').value)" class="btn btn-danger btn-sm" id="deleteBackupBtn" style="display:none; margin-left: 10px;" title="Eliminar completamente este backup">';
+print '<i class="fas fa-trash-alt"></i> Eliminar Backup Completo';
+print '</button>';
 print '</div>';
 print '<div id="backupStats" style="color: #6c757d; font-size: 14px;">Cargando...</div>';
 print '</div>';
@@ -9118,16 +9121,26 @@ function cancelAllDownloads() {
 function updateBackupStats() {
     const rows = document.querySelectorAll('#backupTableBody tr');
     let totalChunks = 0;
+    let totalFiles = 0;
     let totalSizeChunks = 0;
+    let totalSizeAll = 0;
 
     rows.forEach(row => {
-        if (row.style.display !== 'none' && row.classList.contains('chunk-row')) {
-            totalChunks++;
+        if (row.style.display !== 'none') {
+            totalFiles++;
+            const fileType = row.getAttribute('data-type');
+
             // Verificar que la fila tenga suficientes celdas antes de acceder (celda 3 = tamaño)
             if (row.cells && row.cells.length > 3 && row.cells[3]) {
                 const sizeText = row.cells[3].textContent || '';
-                const sizeMB = parseFloat(sizeText.replace(' MB', ''));
-                if (!isNaN(sizeMB)) totalSizeChunks += sizeMB;
+                const sizeMB = parseFloat(sizeText.replace(' MB)', '').replace(' MB', ''));
+                if (!isNaN(sizeMB)) {
+                    totalSizeAll += sizeMB;
+                    if (fileType === 'chunk') {
+                        totalChunks++;
+                        totalSizeChunks += sizeMB;
+                    }
+                }
             }
         }
     });
@@ -9138,8 +9151,10 @@ function updateBackupStats() {
         let statsText = '';
         if (totalChunks > 0) {
             statsText = totalChunks + ' chunk' + (totalChunks !== 1 ? 's' : '') + ' (' + totalSizeChunks.toFixed(1) + ' MB)';
+        } else if (totalFiles > 0) {
+            statsText = totalFiles + ' archivo' + (totalFiles !== 1 ? 's' : '') + ' (' + totalSizeAll.toFixed(1) + ' MB)';
         } else {
-            statsText = '0 chunks (0.0 MB)';
+            statsText = '0 archivos (0.0 MB)';
         }
         statsEl.textContent = statsText;
     }
@@ -9195,7 +9210,11 @@ function showErrorTableMessage(message) {
 }
 
 function updateBackupIdFilter(files) {
-    const backupIds = [...new Set(files.map(file => file.backup_id))];
+    // Obtener solo backups que tengan chunks (archivos principales)
+    const backupsWithChunks = [...new Set(
+        files.filter(file => file.type === 'chunk').map(file => file.backup_id)
+    )];
+
     const filterSelect = document.getElementById('backupIdFilter');
 
     if (!filterSelect) return;
@@ -9210,18 +9229,21 @@ function updateBackupIdFilter(files) {
     filterSelect.appendChild(allOption);
 
     // Agregar opción "Sistema" para archivos del sistema
-    if (backupIds.includes('system')) {
+    const systemFiles = files.filter(file => file.backup_id === 'system');
+    if (systemFiles.length > 0) {
         const systemOption = document.createElement('option');
         systemOption.value = 'system';
         systemOption.textContent = 'Sistema';
         filterSelect.appendChild(systemOption);
     }
 
-    // Agregar backups específicos
-    backupIds.filter(id => id !== 'system' && id !== 'unknown').sort().reverse().forEach(backupId => {
+    // Agregar backups específicos (solo aquellos que tienen chunks)
+    backupsWithChunks.filter(id => id !== 'unknown').sort().reverse().forEach(backupId => {
+        // Contar chunks para este backup
+        const chunkCount = files.filter(file => file.type === 'chunk' && file.backup_id === backupId).length;
         const option = document.createElement('option');
         option.value = backupId;
-        option.textContent = `Backup ${backupId}`;
+        option.textContent = `📦 Backup ${backupId} (${chunkCount} chunk${chunkCount !== 1 ? 's' : ''})`;
         filterSelect.appendChild(option);
     });
 
@@ -9230,6 +9252,25 @@ function updateBackupIdFilter(files) {
         filterSelect.value = 'all';
     } else if (backupIds.length === 1) {
         filterSelect.value = backupIds[0];
+    }
+
+    // Actualizar el botón de eliminar backup
+    updateDeleteBackupButton();
+}
+
+function updateDeleteBackupButton() {
+    const filterSelect = document.getElementById('backupIdFilter');
+    const deleteBtn = document.getElementById('deleteBackupBtn');
+
+    if (!filterSelect || !deleteBtn) return;
+
+    const selectedValue = filterSelect.value;
+
+    // Mostrar el botón solo para backups específicos (no "all" ni "system")
+    if (selectedValue && selectedValue !== 'all' && selectedValue !== 'system') {
+        deleteBtn.style.display = 'inline-block';
+    } else {
+        deleteBtn.style.display = 'none';
     }
 }
 
@@ -9571,6 +9612,106 @@ function cancelDelete() {
         progressBar.style.display = 'none';
         alert('Eliminación cancelada por el usuario.');
     }
+}
+
+function deleteBackupCompletely(backupId) {
+    if (!backupId || backupId === 'all' || backupId === 'system') {
+        alert('Selecciona un backup específico para eliminar.');
+        return;
+    }
+
+    const confirmMessage = `¿Estás seguro de eliminar COMPLETAMENTE el backup ${backupId}?\n\nEsto eliminará TODOS los archivos relacionados:\n• Chunks ZIP\n• Estados de chunks\n• Progreso del backup\n• Logs del backup\n• Lista de archivos\n\nEsta acción NO se puede deshacer.`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    // Mostrar barra de progreso
+    const progressBar = document.getElementById('deleteProgress');
+    const progressBarInner = document.getElementById('deleteProgressBar');
+    const progressText = document.getElementById('deleteProgressText');
+
+    if (progressBar) {
+        progressBar.style.display = 'block';
+        progressText.textContent = 'Eliminando backup completo...';
+        progressBarInner.style.width = '0%';
+    }
+
+    // Obtener todos los archivos de este backup
+    const backupFiles = Array.from(document.querySelectorAll(`#backupTableBody tr[data-backup-id="${backupId}"]`))
+        .map(row => {
+            const checkbox = row.querySelector('.chunk-checkbox');
+            return checkbox ? {
+                fileName: checkbox.value,
+                fileType: row.getAttribute('data-type')
+            } : null;
+        })
+        .filter(file => file !== null);
+
+    if (backupFiles.length === 0) {
+        alert('No se encontraron archivos para este backup.');
+        if (progressBar) progressBar.style.display = 'none';
+        return;
+    }
+
+    let completed = 0;
+    const total = backupFiles.length;
+
+    // Función para procesar archivos secuencialmente
+    function processNext(index) {
+        if (index >= backupFiles.length) {
+            // Todos completados
+            if (progressBar) {
+                progressText.textContent = '¡Backup eliminado completamente!';
+                progressBarInner.style.width = '100%';
+                setTimeout(() => {
+                    progressBar.style.display = 'none';
+                    loadAvailableFiles(); // Recargar la lista
+                }, 2000);
+            }
+            return;
+        }
+
+        const file = backupFiles[index];
+
+        // Actualizar progreso
+        const percent = Math.round(((index + 1) / total) * 100);
+        if (progressBarInner) {
+            progressBarInner.style.width = percent + '%';
+        }
+        progressText.textContent = `Eliminando ${file.fileType}: ${file.fileName}...`;
+
+        // Enviar solicitud de eliminación
+        fetch('../scripts/cleanup_chunks.php?action=delete&t=' + Date.now(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'filename=' + encodeURIComponent(file.fileName)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                completed++;
+                console.log(`Archivo eliminado: ${file.fileName}`);
+            } else {
+                console.error(`Error eliminando archivo: ${file.fileName}`, data.error);
+            }
+            processNext(index + 1);
+        })
+        .catch(error => {
+            console.error(`Error en archivo: ${file.fileName}`, error);
+            processNext(index + 1);
+        });
+    }
+
+    // Iniciar procesamiento
+    processNext(0);
 }
 
 // Inicializar cuando se carga la página
