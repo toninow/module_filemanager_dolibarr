@@ -29,106 +29,64 @@ ob_start();
 // DETECCIÓN DINÁMICA DE RUTAS - ANTES DE CUALQUIER COSA
 // ============================================================================
 
-// Función para detectar la raíz de Dolibarr dinámicamente (versión simplificada)
-function detectDolibarrRootForModule() {
+// Función mejorada para detectar la raíz completa de Dolibarr
+function getDolibarrFullRoot() {
     $dolibarrRoot = '';
 
-    // Método 1: Desde la ubicación del script (más robusto)
+    // MÉTODO PRIORITARIO: Usar DOL_DOCUMENT_ROOT si está disponible (desde autenticación)
+    if (defined('DOL_DOCUMENT_ROOT') && !empty(DOL_DOCUMENT_ROOT)) {
+        $testPath = @realpath(DOL_DOCUMENT_ROOT);
+        if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
+            return $testPath;
+        }
+    }
+
+    // MÉTODO 2: Desde la ubicación del script hacia arriba (método directo)
     $scriptDir = @realpath(__DIR__);
     if ($scriptDir) {
-        // Intentar diferentes niveles: ../../.., ../.., .., y también con htdocs
-        $possiblePaths = [
-            $scriptDir . '/../../../htdocs',  // custom/filemanager/scripts -> htdocs
-            $scriptDir . '/../../htdocs',      // custom/filemanager/scripts -> htdocs (alternativa)
-            $scriptDir . '/../../../',         // custom/filemanager/scripts -> raíz
-            $scriptDir . '/../..',             // custom/filemanager/scripts -> custom
-            dirname(dirname(dirname($scriptDir))) . '/htdocs',
-            dirname(dirname(dirname($scriptDir))),
-            dirname(dirname($scriptDir))
-        ];
+        // Ir directamente 3 niveles arriba (custom/filemanager/scripts -> raíz)
+        $candidateRoot = @realpath($scriptDir . '/../../../');
+        if ($candidateRoot && @is_dir($candidateRoot) && @file_exists($candidateRoot . '/main.inc.php')) {
+            return $candidateRoot;
+        }
 
-        foreach ($possiblePaths as $possiblePath) {
-            $testPath = @realpath($possiblePath);
-            if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
-                $dolibarrRoot = $testPath;
-                return $dolibarrRoot;
-            }
+        // También probar con htdocs
+        $candidateRootHtdocs = @realpath($scriptDir . '/../../../htdocs');
+        if ($candidateRootHtdocs && @is_dir($candidateRootHtdocs) && @file_exists($candidateRootHtdocs . '/main.inc.php')) {
+            return $candidateRootHtdocs;
         }
     }
 
-    // Método 2: Buscar desde el directorio actual hacia arriba (recursivo)
-    if (empty($dolibarrRoot)) {
-        $currentDir = @realpath(__DIR__);
-        $maxLevels = 10; // Límite de seguridad
-        $level = 0;
-        while ($currentDir && $currentDir !== '/' && $currentDir !== dirname($currentDir) && $level < $maxLevels) {
-            // Probar el directorio actual
-            if (@file_exists($currentDir . '/main.inc.php')) {
-                $dolibarrRoot = $currentDir;
-                return $dolibarrRoot;
-            }
-            // También probar subdirectorio htdocs si existe
-            if (@is_dir($currentDir . '/htdocs') && @file_exists($currentDir . '/htdocs/main.inc.php')) {
-                $dolibarrRoot = $currentDir . '/htdocs';
-                return $dolibarrRoot;
-            }
-            $currentDir = dirname($currentDir);
-            $level++;
+    // MÉTODO 3: Buscar recursivamente main.inc.php desde el directorio del script
+    $currentDir = @realpath(__DIR__);
+    $maxLevels = 8; // Límite de seguridad
+    $level = 0;
+    while ($currentDir && $currentDir !== '/' && $currentDir !== dirname($currentDir) && $level < $maxLevels) {
+        // Probar el directorio actual
+        if (@file_exists($currentDir . '/main.inc.php')) {
+            return $currentDir;
         }
+        // Probar htdocs si existe
+        if (@is_dir($currentDir . '/htdocs') && @file_exists($currentDir . '/htdocs/main.inc.php')) {
+            return $currentDir . '/htdocs';
+        }
+        $currentDir = dirname($currentDir);
+        $level++;
     }
 
-    // Método 3: Desde $_SERVER['DOCUMENT_ROOT'] (común en hostings)
-    if (empty($dolibarrRoot) && isset($_SERVER['DOCUMENT_ROOT'])) {
+    // MÉTODO 4: Fallback a DOCUMENT_ROOT
+    if (isset($_SERVER['DOCUMENT_ROOT'])) {
         $docRoot = @realpath($_SERVER['DOCUMENT_ROOT']);
-        if ($docRoot) {
-            // Probar diferentes subdirectorios comunes
-            $commonPaths = [
-                $docRoot,
-                $docRoot . '/htdocs',
-                $docRoot . '/public_html',
-                $docRoot . '/www',
-                $docRoot . '/web',
-                dirname($docRoot),
-                dirname($docRoot) . '/htdocs'
-            ];
-
-            foreach ($commonPaths as $commonPath) {
-                $testPath = @realpath($commonPath);
-                if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
-                    $dolibarrRoot = $testPath;
-                    return $dolibarrRoot;
-                }
-            }
-        }
-    }
-
-    // Método 4: Desde $_SERVER['SCRIPT_FILENAME'] (ruta del script actual)
-    if (empty($dolibarrRoot) && isset($_SERVER['SCRIPT_FILENAME'])) {
-        $scriptFile = @realpath($_SERVER['SCRIPT_FILENAME']);
-        if ($scriptFile) {
-            $scriptDir = dirname($scriptFile);
-            $maxLevels = 10;
-            $level = 0;
-            while ($scriptDir && $scriptDir !== '/' && $level < $maxLevels) {
-                if (@file_exists($scriptDir . '/main.inc.php')) {
-                    $dolibarrRoot = $scriptDir;
-                    return $dolibarrRoot;
-                }
-                if (@is_dir($scriptDir . '/htdocs') && @file_exists($scriptDir . '/htdocs/main.inc.php')) {
-                    $dolibarrRoot = $scriptDir . '/htdocs';
-                    return $dolibarrRoot;
-                }
-                $scriptDir = dirname($scriptDir);
-                $level++;
-            }
+        if ($docRoot && @file_exists($docRoot . '/main.inc.php')) {
+            return $docRoot;
         }
     }
 
     return $dolibarrRoot;
 }
 
-// Detectar la raíz de Dolibarr ANTES de cualquier operación
-$dolibarrRoot = detectDolibarrRootForModule();
+// Detectar la raíz completa de Dolibarr ANTES de cualquier operación
+$dolibarrRoot = getDolibarrFullRoot();
 
 // Función para limpiar TODOS los archivos de un backup cuando hay error
 function cleanupBackupFilesOnError($backupId, $backupDir) {
@@ -1204,11 +1162,11 @@ if ($action === 'init' || $action === 'continue_listing') {
                 $relativeDir = '...' . substr($relativeDir, -57);
             }
             
-            chunkLog("   📁 Procesando: {$relativeDir}", $logFile);
-            chunkLog("   📊 Progreso: " . number_format($filesInCurrentBatch) . " archivos | " . number_format($dirsProcessed) . " dirs procesados | " . number_format($dirsRemaining) . " dirs pendientes", $logFile);
-            chunkLog("   ⚡ Velocidad: " . number_format($filesPerSecond) . " archivos/s | " . number_format($dirsPerSecond, 1) . " dirs/s", $logFile);
-            chunkLog("   ⏱️  Tiempo: {$elapsedStr} transcurrido | ~{$remainingStr} restante", $logFile);
-            chunkLog("", $logFile);
+            // LOG OPTIMIZADO: Solo cada 10 directorios o 5000 archivos para no ralentizar
+            $shouldLog = ($dirsProcessed % 10 === 0) || ($filesInCurrentBatch > 5000 && $filesInCurrentBatch % 5000 === 0);
+            if ($shouldLog) {
+                chunkLog("📁 Procesando: {$relativeDir} | " . number_format($filesInCurrentBatch) . " archivos | {$elapsedStr} transcurrido", $logFile);
+            }
             
             // Actualizar estado con información de progreso
             $scannedDirsList = is_array($scannedDirs) ? array_keys($scannedDirs) : [];
@@ -1906,11 +1864,8 @@ if ($action === 'process') {
         // ========== VERIFICAR EXCLUSIONES POR TAMAÑO/PATRÓN ==========
         // Excluir archivos muy grandes que causan timeout (ZIPs > 500MB, backups antiguos, etc.)
         if (shouldExcludeFile($filePath, $excludeFiles, $excludePatterns, $excludePathPatterns)) {
-            $fileSize = @filesize($filePath);
-            $sizeMB = $fileSize ? round($fileSize / 1024 / 1024, 2) : 0;
-            chunkLog("   ⏭️ Saltando archivo grande excluido ({$sizeMB}MB): " . basename($filePath), $logFile);
             $chunkProcessed++; // Contar como procesado para avanzar
-            continue;
+            continue; // Sin log para no ralentizar
         }
         
         // OPTIMIZACIÓN: Calcular ruta relativa PRIMERO (más rápido)
@@ -1947,19 +1902,12 @@ if ($action === 'process') {
                 $state['processed_files'][$i] = true;
             }
             // Loggear archivos grandes para seguimiento
-            if ($fileSize > 100 * 1024 * 1024) { // > 100MB
-                $sizeMB = round($fileSize / 1024 / 1024, 2);
-                chunkLog("   📁 Archivo grande ({$sizeMB}MB, " . round($addTime, 2) . "s): " . basename($filePath), $logFile);
-            }
+            // No loggear archivos grandes para mejorar rendimiento
         } else {
             $errors++;
-            // Loggear errores inmediatamente para archivos grandes (puede ser importante)
-            if ($fileSize > 100 * 1024 * 1024) {
-                $sizeMB = round($fileSize / 1024 / 1024, 2);
-                chunkLog("   ❌ Error agregando archivo grande ({$sizeMB}MB): " . basename($filePath), $logFile);
-            } elseif ($errors % 500 == 0) {
-                // Solo loggear errores cada 500 archivos para archivos pequeños
-                chunkLog("   ❌ Errores agregando archivos: " . $errors . " hasta ahora", $logFile);
+            // Solo loggear errores cada 1000 archivos para no ralentizar
+            if ($errors % 1000 == 0) {
+                chunkLog("   ⚠️ " . $errors . " errores de archivos hasta ahora", $logFile);
             }
         }
         
