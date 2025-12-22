@@ -9161,9 +9161,33 @@ function updateBackupStats() {
 }
 
 function loadAvailableFiles() {
+    console.log('🔍 DEBUG: Iniciando carga de archivos disponibles');
     fetch('../scripts/cleanup_chunks.php?action=list&t=' + Date.now())
-        .then(response => response.json())
+        .then(response => {
+            console.log('🔍 DEBUG: Respuesta del servidor:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('🔍 DEBUG: Datos recibidos del backend:', data);
+            console.log('🔍 DEBUG: Número de archivos:', data.files ? data.files.length : 0);
+
+            if (data.files && data.files.length > 0) {
+                console.log('🔍 DEBUG: Primeros 5 archivos:', data.files.slice(0, 5));
+
+                // Revisar si hay archivos del backup problemático
+                const problematicFiles = data.files.filter(f => f.backup_id === '20251221132327');
+                console.log('🔍 DEBUG: Archivos del backup 20251221132327:', problematicFiles);
+
+                // Revisar chunks por backup
+                const chunksByBackup = {};
+                data.files.filter(f => f.type === 'chunk').forEach(chunk => {
+                    if (!chunksByBackup[chunk.backup_id]) {
+                        chunksByBackup[chunk.backup_id] = [];
+                    }
+                    chunksByBackup[chunk.backup_id].push(chunk.file_name);
+                });
+                console.log('🔍 DEBUG: Chunks por backup:', chunksByBackup);
+            }
             if (data.success && data.files.length > 0) {
                 // Limpiar la tabla antes de agregar archivos para evitar duplicados
                 clearBackupTable();
@@ -9210,10 +9234,15 @@ function showErrorTableMessage(message) {
 }
 
 function updateBackupIdFilter(files) {
+    console.log('🔍 DEBUG: updateBackupIdFilter - archivos recibidos:', files.length);
+
     // Obtener solo backups que tengan chunks (archivos principales)
-    const backupsWithChunks = [...new Set(
-        files.filter(file => file.type === 'chunk').map(file => file.backup_id)
-    )];
+    const allChunks = files.filter(file => file.type === 'chunk');
+    console.log('🔍 DEBUG: Chunks encontrados:', allChunks.length);
+    console.log('🔍 DEBUG: Chunks por backup:', allChunks.map(c => ({backup: c.backup_id, file: c.file_name})));
+
+    const backupsWithChunks = [...new Set(allChunks.map(file => file.backup_id))];
+    console.log('🔍 DEBUG: Backups con chunks detectados:', backupsWithChunks);
 
     const filterSelect = document.getElementById('backupIdFilter');
 

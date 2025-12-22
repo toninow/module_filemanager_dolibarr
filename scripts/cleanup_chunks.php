@@ -91,11 +91,12 @@ try {
 
         $files = [];
 
-        if (is_dir($backupDir)) {
-            // Buscar todos los archivos relevantes
-            $allFiles = glob($backupDir . '/*');
+    if (is_dir($backupDir)) {
+        // Buscar todos los archivos relevantes
+        $allFiles = glob($backupDir . '/*');
+        error_log("DEBUG: Archivos encontrados en $backupDir: " . count($allFiles));
 
-            foreach ($allFiles as $filePath) {
+        foreach ($allFiles as $filePath) {
                 if (!is_file($filePath)) continue;
 
                 $fileName = basename($filePath);
@@ -196,6 +197,24 @@ try {
                 return strcmp($a['file_name'], $b['file_name']);
             });
         }
+
+        // Debug: Mostrar resumen de archivos procesados
+        error_log("DEBUG: Total files processed: " . count($files));
+        $typesCount = array_count_values(array_column($files, 'type'));
+        error_log("DEBUG: Files by type: " . json_encode($typesCount));
+        $backupIds = array_unique(array_filter(array_column($files, 'backup_id')));
+        error_log("DEBUG: Backup IDs found: " . json_encode($backupIds));
+        $chunks = array_filter($files, function($f) { return $f['type'] === 'chunk'; });
+        error_log("DEBUG: Chunks found: " . count($chunks));
+        $chunksByBackup = [];
+        foreach ($chunks as $chunk) {
+            $backupId = $chunk['backup_id'];
+            if (!isset($chunksByBackup[$backupId])) {
+                $chunksByBackup[$backupId] = 0;
+            }
+            $chunksByBackup[$backupId]++;
+        }
+        error_log("DEBUG: Chunks by backup: " . json_encode($chunksByBackup));
 
         echo json_encode([
             'success' => true,
