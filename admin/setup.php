@@ -9392,10 +9392,10 @@ function updateBackupIdFilter(files) {
     });
 
     // Si hay múltiples backups, seleccionar "all" por defecto
-    if (backupIds.length > 1) {
+    if (backupsWithChunks.length > 1) {
         filterSelect.value = 'all';
-    } else if (backupIds.length === 1) {
-        filterSelect.value = backupIds[0];
+    } else if (backupsWithChunks.length === 1) {
+        filterSelect.value = backupsWithChunks[0];
     }
 
     // Actualizar el botón de eliminar backup
