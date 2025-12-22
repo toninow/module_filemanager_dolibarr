@@ -25,6 +25,111 @@ header('Access-Control-Allow-Origin: *');
 // Iniciar buffer de salida para capturar cualquier HTML
 ob_start();
 
+// ============================================================================
+// DETECCIÓN DINÁMICA DE RUTAS - ANTES DE CUALQUIER COSA
+// ============================================================================
+
+// Función para detectar la raíz de Dolibarr dinámicamente (versión simplificada)
+function detectDolibarrRootForModule() {
+    $dolibarrRoot = '';
+
+    // Método 1: Desde la ubicación del script (más robusto)
+    $scriptDir = @realpath(__DIR__);
+    if ($scriptDir) {
+        // Intentar diferentes niveles: ../../.., ../.., .., y también con htdocs
+        $possiblePaths = [
+            $scriptDir . '/../../../htdocs',  // custom/filemanager/scripts -> htdocs
+            $scriptDir . '/../../htdocs',      // custom/filemanager/scripts -> htdocs (alternativa)
+            $scriptDir . '/../../../',         // custom/filemanager/scripts -> raíz
+            $scriptDir . '/../..',             // custom/filemanager/scripts -> custom
+            dirname(dirname(dirname($scriptDir))) . '/htdocs',
+            dirname(dirname(dirname($scriptDir))),
+            dirname(dirname($scriptDir))
+        ];
+
+        foreach ($possiblePaths as $possiblePath) {
+            $testPath = @realpath($possiblePath);
+            if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
+                $dolibarrRoot = $testPath;
+                return $dolibarrRoot;
+            }
+        }
+    }
+
+    // Método 2: Buscar desde el directorio actual hacia arriba (recursivo)
+    if (empty($dolibarrRoot)) {
+        $currentDir = @realpath(__DIR__);
+        $maxLevels = 10; // Límite de seguridad
+        $level = 0;
+        while ($currentDir && $currentDir !== '/' && $currentDir !== dirname($currentDir) && $level < $maxLevels) {
+            // Probar el directorio actual
+            if (@file_exists($currentDir . '/main.inc.php')) {
+                $dolibarrRoot = $currentDir;
+                return $dolibarrRoot;
+            }
+            // También probar subdirectorio htdocs si existe
+            if (@is_dir($currentDir . '/htdocs') && @file_exists($currentDir . '/htdocs/main.inc.php')) {
+                $dolibarrRoot = $currentDir . '/htdocs';
+                return $dolibarrRoot;
+            }
+            $currentDir = dirname($currentDir);
+            $level++;
+        }
+    }
+
+    // Método 3: Desde $_SERVER['DOCUMENT_ROOT'] (común en hostings)
+    if (empty($dolibarrRoot) && isset($_SERVER['DOCUMENT_ROOT'])) {
+        $docRoot = @realpath($_SERVER['DOCUMENT_ROOT']);
+        if ($docRoot) {
+            // Probar diferentes subdirectorios comunes
+            $commonPaths = [
+                $docRoot,
+                $docRoot . '/htdocs',
+                $docRoot . '/public_html',
+                $docRoot . '/www',
+                $docRoot . '/web',
+                dirname($docRoot),
+                dirname($docRoot) . '/htdocs'
+            ];
+
+            foreach ($commonPaths as $commonPath) {
+                $testPath = @realpath($commonPath);
+                if ($testPath && @is_dir($testPath) && @file_exists($testPath . '/main.inc.php')) {
+                    $dolibarrRoot = $testPath;
+                    return $dolibarrRoot;
+                }
+            }
+        }
+    }
+
+    // Método 4: Desde $_SERVER['SCRIPT_FILENAME'] (ruta del script actual)
+    if (empty($dolibarrRoot) && isset($_SERVER['SCRIPT_FILENAME'])) {
+        $scriptFile = @realpath($_SERVER['SCRIPT_FILENAME']);
+        if ($scriptFile) {
+            $scriptDir = dirname($scriptFile);
+            $maxLevels = 10;
+            $level = 0;
+            while ($scriptDir && $scriptDir !== '/' && $level < $maxLevels) {
+                if (@file_exists($scriptDir . '/main.inc.php')) {
+                    $dolibarrRoot = $scriptDir;
+                    return $dolibarrRoot;
+                }
+                if (@is_dir($scriptDir . '/htdocs') && @file_exists($scriptDir . '/htdocs/main.inc.php')) {
+                    $dolibarrRoot = $scriptDir . '/htdocs';
+                    return $dolibarrRoot;
+                }
+                $scriptDir = dirname($scriptDir);
+                $level++;
+            }
+        }
+    }
+
+    return $dolibarrRoot;
+}
+
+// Detectar la raíz de Dolibarr ANTES de cualquier operación
+$dolibarrRoot = detectDolibarrRootForModule();
+
 // Función para limpiar TODOS los archivos de un backup cuando hay error
 function cleanupBackupFilesOnError($backupId, $backupDir) {
     if (empty($backupId)) {
@@ -175,8 +280,9 @@ function cleanOutputAndJson($data, $backupId = null, $backupDir = null) {
 // Desactivar compresión que puede causar problemas
 @ini_set('zlib.output_compression', 'Off');
 
-// Log de inicio para debug
-$debugLogFile = __DIR__ . '/../backups/debug_chunk.log';
+// Log de inicio para debug - USANDO RUTA DINÁMICA
+$moduleDir = dirname(__DIR__); // Subir un nivel desde scripts/
+$debugLogFile = $moduleDir . '/backups/debug_chunk.log';
 $serverInfo = "Host: " . ($_SERVER['HTTP_HOST'] ?? 'unknown') . 
               " | PHP: " . phpversion() . 
               " | Memory: " . ini_get('memory_limit') . 
@@ -278,8 +384,8 @@ $startRequestTime = time();
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $backupId = $_GET['backup_id'] ?? $_POST['backup_id'] ?? '';
 
-// Archivo de token de sesión para evitar conexiones a DB
-$tokenFile = __DIR__ . '/../backups/.auth_token_' . session_id() . '.json';
+// Archivo de token de sesión para evitar conexiones a DB - USANDO RUTA DINÁMICA
+$tokenFile = $moduleDir . '/backups/.auth_token_' . session_id() . '.json';
 
 // Solo cargar Dolibarr completo en INIT o si no hay token válido
 // PROTECCIÓN: No cargar Dolibarr durante finalización para no afectarlo
@@ -295,12 +401,12 @@ if ($action === 'finalize' && file_exists($tokenFile)) {
 if ($needFullAuth) {
     // Capturar cualquier salida HTML antes de cargar Dolibarr
     ob_start();
-    
-    // Incluir Dolibarr SOLO cuando es necesario
-    $mainPath = realpath(__DIR__ . '/../../../main.inc.php');
-    if (!$mainPath || !file_exists($mainPath)) {
+
+    // Incluir Dolibarr SOLO cuando es necesario - USANDO DETECCIÓN DINÁMICA
+    $mainPath = $dolibarrRoot . '/main.inc.php';
+    if (!$dolibarrRoot || !@file_exists($mainPath)) {
         ob_end_clean();
-        cleanOutputAndJson(['success' => false, 'error' => 'No se puede cargar Dolibarr']);
+        cleanOutputAndJson(['success' => false, 'error' => 'No se puede detectar/cargar Dolibarr. Raíz detectada: ' . ($dolibarrRoot ?: 'NINGUNA')]);
     }
     
     // Cargar Dolibarr capturando cualquier salida HTML
@@ -374,8 +480,8 @@ if ($isLocalhost) {
 $chunkSize = intval($_GET['chunk_size'] ?? $_POST['chunk_size'] ?? $defaultChunkSize);
 $chunkSize = max($minChunk, min($maxChunk, $chunkSize));
 
-// Directorios - Detectar dinámicamente desde __DIR__
-$backupDir = __DIR__ . '/../backups';
+// Directorios - Detectar dinámicamente desde módulo
+$backupDir = $moduleDir . '/backups';
 $backupDir = realpath($backupDir) ?: $backupDir;
 
 // Si no existe, intentar crearlo
@@ -630,13 +736,15 @@ function detectDolibarrRoot($dolibarrRootFromToken = '', $needFullAuth = false, 
     return $dolibarrRoot;
 }
 
-// Obtener raíz de Dolibarr usando la función robusta
-// NOTA: $logFile puede no estar definido aún en este punto, se pasará vacío y se usará después
-$dolibarrRoot = detectDolibarrRoot(
-    isset($dolibarrRootFromToken) ? $dolibarrRootFromToken : '', 
-    isset($needFullAuth) ? $needFullAuth : false, 
-    '' // logFile se definirá después, por ahora vacío
-);
+// Si aún no tenemos raíz detectada, usar la función robusta
+// NOTA: Ya intentamos detectar antes, pero aquí podemos usar token/DB si está disponible
+if (empty($dolibarrRoot)) {
+    $dolibarrRoot = detectDolibarrRoot(
+        isset($dolibarrRootFromToken) ? $dolibarrRootFromToken : '',
+        isset($needFullAuth) ? $needFullAuth : false,
+        '' // logFile se definirá después, por ahora vacío
+    );
+}
 
 // ============================================================================
 // EXCLUSIONES - Backups, papelera, archivos eliminados, base de datos
