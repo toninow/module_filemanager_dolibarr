@@ -9646,11 +9646,10 @@ function deleteSingleFile(event, backupId, fileName, fileType) {
     })
     .then(data => {
         if (data.success) {
-            alert(`Archivo eliminado correctamente.\n\nEspacio liberado: ${data.space_freed_mb || 0} MB`);
-            const row = deleteButton.closest('tr');
-            row.remove();
-            updateBackupStats();
-            loadAvailableFiles();
+            showTemporaryMessage(`Archivo eliminado correctamente. Espacio liberado: ${data.space_freed_mb || 0} MB`, 'success');
+            setTimeout(() => {
+                location.reload(); // Recargar página completa
+            }, 1500);
         } else {
             alert('Error al eliminar el archivo: ' + (data.message || 'Error desconocido'));
             deleteButton.innerHTML = originalText;
@@ -9702,7 +9701,7 @@ function deleteSelectedChunks() {
                 progressBarInner.style.width = '100%';
                 setTimeout(() => {
                     progressBar.style.display = 'none';
-                    loadAvailableFiles(); // Recargar la lista
+                    location.reload(); // Recargar página completa
                 }, 2000);
             }
             return;
@@ -9817,7 +9816,7 @@ function deleteBackupCompletely(backupId) {
                 progressBarInner.style.width = '100%';
                 setTimeout(() => {
                     progressBar.style.display = 'none';
-                    loadAvailableFiles(); // Recargar la lista
+                    location.reload(); // Recargar página completa
                 }, 2000);
             }
             return;
