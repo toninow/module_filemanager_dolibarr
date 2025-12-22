@@ -3997,7 +3997,6 @@ function proceedWithAnalysis(type) {
                 return r.json();
             })
             .then(data => {
-                console.log('🔍 DEBUG POLL #' + pollCount + ': Data received:', data);
                 if (data && data.success) {
 
                     // IGNORAR datos antiguos SOLO si:
@@ -4016,7 +4015,6 @@ function proceedWithAnalysis(type) {
 
                     // Actualizar UI si está corriendo, son datos recientes, o son datos completados válidos
                     if (data.running || !isOldData || isCompletedValidData) {
-                        console.log('🔍 DEBUG POLL #' + pollCount + ': UPDATING UI - running:', data.running, 'isOldData:', isOldData, 'isCompletedValidData:', isCompletedValidData);
                         updateProgressUI(data);
                     } else {
                         // Mantener valores en 0 solo para datos antiguos irrelevantes
@@ -4102,11 +4100,8 @@ function proceedWithAnalysis(type) {
         
         // Función auxiliar para actualizar la UI con los datos de progreso
     const updateProgressUI = (data) => {
-        console.log('🟢 [DEBUG] updateProgressUI called with:', data);
-        // Log detallado de actualización
+        // Actualizar estadísticas SIEMPRE, incluso si son 0
         if (data && data.stats) {
-            console.log('🟢 [DEBUG] updateProgressUI - files:', data.stats.total_files, 'folders:', data.stats.total_folders, 'size:', data.stats.total_size_mb, 'running:', data.running);
-        }
         // Actualizar estadísticas SIEMPRE, incluso si son 0
         if (data && data.stats) {
             const statFiles = document.getElementById('statFiles');

@@ -1449,6 +1449,9 @@ if ($action === 'init' || $action === 'continue_listing') {
     $totalSize = 0;
     $totalFolders = 0;
 
+    // Usar el total real de archivos (no parcial)
+    $totalFiles = count($allFiles);
+
     // Contar carpetas y calcular tamaño total aproximado (solo de primeros 1000 archivos para performance)
     $count = 0;
     foreach ($allFiles as $filePath) {
