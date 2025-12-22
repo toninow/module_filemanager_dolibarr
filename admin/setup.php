@@ -3998,27 +3998,32 @@ function proceedWithAnalysis(type) {
             })
             .then(data => {
                 if (data && data.success) {
-                    
-                    // IGNORAR datos si NO está corriendo Y el timestamp es muy antiguo (más de 2 minutos)
+
+                    // IGNORAR datos antiguos SOLO si:
+                    // 1. El análisis está corriendo (datos intermedios antiguos podrían ser irrelevantes)
+                    // 2. O son datos vacíos/completados sin resultados
                     const now = Math.floor(Date.now() / 1000);
                     const timeSinceUpdate = now - (data.last_update || 0);
-                    const isOldData = !data.running && timeSinceUpdate > 120;
-                    
+                    const isOldData = data.running && timeSinceUpdate > 120;
+
+                    // PERMITIR siempre datos completados válidos (con resultados)
+                    const isCompletedValidData = !data.running && data.stats && data.stats.total_files > 0;
+
                     if (isOldData && pollCount % 10 === 0) {
-                        console.warn('⚠️ [DEBUG] Poll #' + pollCount + ' - Datos antiguos detectados (hace ' + timeSinceUpdate + 's), ignorando...');
+                        console.warn('⚠️ [DEBUG] Poll #' + pollCount + ' - Datos antiguos detectados durante análisis en curso (hace ' + timeSinceUpdate + 's), ignorando...');
                     }
-                    
-                    // Solo actualizar UI si está corriendo O si los datos son recientes
-                    if (data.running || !isOldData) {
+
+                    // Actualizar UI si está corriendo, son datos recientes, o son datos completados válidos
+                    if (data.running || !isOldData || isCompletedValidData) {
                         updateProgressUI(data);
                     } else {
-                        // Mantener valores en 0 si son datos antiguos
+                        // Mantener valores en 0 solo para datos antiguos irrelevantes
                         if (pollCount === 1 || pollCount % 10 === 0) {
-                            // Keeping values at 0 (old data ignored) - debug logs removed for performance
+                            // Keeping values at 0 (old irrelevant data ignored) - debug logs removed for performance
                         }
                     }
-                    
-                    if (!data.running && data.stats && data.stats.total_files > 0 && !isOldData) {
+
+                    if (!data.running && data.stats && data.stats.total_files > 0) {
                         // Análisis completado (solo si no son datos antiguos)
                         
                         // Asegurar que los valores finales se muestren
