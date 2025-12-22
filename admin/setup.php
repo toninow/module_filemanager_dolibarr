@@ -4642,12 +4642,122 @@ function confirmBackup() {
 }
 
 function cancelAnalysis() {
-    stopAnalysisLoader();
-    document.getElementById('previewPanel').style.display = 'none';
-    document.getElementById('statsContent').innerHTML = '';
-    // Restaurar todos los botones usando la función centralizada
-    restoreAllBackupButtons();
+    // Mostrar indicador de cancelación
+    const cancelBtn = document.querySelector('.butActionCancel');
+    if (cancelBtn) {
+        cancelBtn.disabled = true;
+        cancelBtn.innerHTML = '🧹 Cancelando y limpiando...';
+    }
+
+    // Detener el polling del progreso
+    if (progressMonitorInterval) {
+        clearInterval(progressMonitorInterval);
+        progressMonitorInterval = null;
+    }
+
+    // LIMPIAR archivos del análisis cancelado
+    const cleanupProgressUrl = 'http://localhost/dolibarr/custom/filemanager/scripts/cleanup_analysis_progress.php';
+
+    fetch(cleanupProgressUrl + '?t=' + Date.now(), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'token=<?php echo $token; ?>&action=cancel'
+    })
+    .then(response => response.json())
+    .then(cleanupData => {
+        if (cleanupData.success) {
+            console.log('✅ Análisis cancelado - Archivos limpiados:', cleanupData.files_cleaned);
+        } else {
+            console.warn('⚠️ Error en limpieza:', cleanupData.error);
+        }
+
+        // Continuar con la limpieza normal de UI
+        stopAnalysisLoader();
+        document.getElementById('previewPanel').style.display = 'none';
+        document.getElementById('statsContent').innerHTML = '';
+
+        // Mostrar mensaje de cancelación exitosa
+        if (cleanupData.files_cleaned > 0) {
+            showTemporaryMessage('✅ Análisis cancelado. ' + cleanupData.files_cleaned + ' archivos temporales eliminados.', 'success');
+        } else {
+            showTemporaryMessage('✅ Análisis cancelado.', 'info');
+        }
+
+        // Restaurar todos los botones
+        restoreAllBackupButtons();
+    })
+    .catch(error => {
+        console.error('Error en cancelación:', error);
+        // Aún así continuar con la limpieza normal
+        stopAnalysisLoader();
+        document.getElementById('previewPanel').style.display = 'none';
+        document.getElementById('statsContent').innerHTML = '';
+        restoreAllBackupButtons();
+    });
 }
+
+// Función helper para mostrar mensajes temporales
+function showTemporaryMessage(message, type = 'info') {
+    // Crear contenedor si no existe
+    let messageContainer = document.getElementById('tempMessageContainer');
+    if (!messageContainer) {
+        messageContainer = document.createElement('div');
+        messageContainer.id = 'tempMessageContainer';
+        messageContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(messageContainer);
+    }
+
+    // Crear mensaje
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        padding: 15px 20px;
+        border-radius: 8px;
+        border-left: 4px solid ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-bottom: 10px;
+        font-weight: 500;
+        animation: slideInRight 0.3s ease-out;
+    `;
+
+    messageDiv.innerHTML = message;
+    messageContainer.appendChild(messageDiv);
+
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 300);
+    }, 5000);
+}
+
+// Agregar estilos de animación para mensajes temporales
+const tempMessageStyle = document.createElement('style');
+tempMessageStyle.textContent = `
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+`;
+document.head.appendChild(tempMessageStyle);
 
 // ============================================================
 // BACKUP POR CHUNKS - Funciona en CUALQUIER hosting
