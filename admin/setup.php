@@ -9183,7 +9183,7 @@ function clearBackupTable() {
 function showEmptyTableMessage() {
     const tableBody = document.getElementById('backupTableBody');
     if (tableBody) {
-        tableBody.innerHTML = '<tr class="oddeven"><td colspan="6" class="opacitymedium center">No hay chunks disponibles</td></tr>';
+        tableBody.innerHTML = '<tr class="oddeven"><td colspan="6" class="opacitymedium center">No hay archivos disponibles</td></tr>';
     }
 }
 
@@ -9409,7 +9409,7 @@ function deleteSingleChunk(event, backupId, chunkNumber, fileName) {
             updateBackupStats();
 
             // Recargar chunks para actualizar la lista
-            loadAvailableChunks();
+            loadAvailableFiles();
 
         } else {
             // Error en la eliminación
