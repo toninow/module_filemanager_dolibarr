@@ -1385,6 +1385,9 @@ print '</button>';
 print '<button onclick="clearSelection()" class="btn btn-light" style="margin-left: 10px;">';
 print '<i class="fas fa-times"></i> Limpiar Selección';
 print '</button>';
+print '<button onclick="deleteSelectedChunks()" class="btn btn-danger" id="deleteSelectedBtn" style="display:none; margin-left: 10px;">';
+print '<i class="fas fa-trash"></i> Eliminar Seleccionados (<span id="selectedDeleteCount">0</span>)';
+print '</button>';
 print '</div>';
 
 // Barra de progreso
@@ -1401,6 +1404,22 @@ print '</button>';
 print '</div>';
 print '<div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px;">';
 print '<div id="progressBar" style="width: 0%; height: 100%; background: #007bff; border-radius: 10px; transition: width 0.3s ease;"></div>';
+print '</div>';
+print '</div>';
+print '</div>';
+
+// Barra de progreso para eliminación
+print '<div id="deleteProgress" style="display:none; margin-bottom: 15px;">';
+print '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">';
+print '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">';
+print '<div>';
+print '<span id="deleteProgressText" style="font-weight: 600; color: #495057;">Eliminando...</span>';
+print '<span id="deleteProgressPercent" style="margin-left: 10px; color: #6c757d;">0%</span>';
+print '</div>';
+print '<button onclick="cancelDelete()" class="btn btn-sm btn-outline-danger">Cancelar</button>';
+print '</div>';
+print '<div style="background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden;">';
+print '<div id="deleteProgressBar" style="background: linear-gradient(90deg, #dc3545, #c82333); height: 100%; width: 0%; transition: width 0.3s ease;"></div>';
 print '</div>';
 print '</div>';
 print '</div>';
@@ -8965,14 +8984,23 @@ function toggleAllCheckboxes() {
 
 function updateSelectedCount() {
     const selectedCount = document.querySelectorAll('.chunk-checkbox:checked').length;
-    const btn = document.getElementById('downloadSelectedBtn');
-    const countSpan = document.getElementById('selectedCount');
+    const downloadBtn = document.getElementById('downloadSelectedBtn');
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const downloadCountSpan = document.getElementById('selectedCount');
+    const deleteCountSpan = document.getElementById('selectedDeleteCount');
 
     if (selectedCount > 0) {
-        btn.style.display = 'inline-block';
-        countSpan.textContent = selectedCount;
+        if (downloadBtn) {
+            downloadBtn.style.display = 'inline-block';
+            downloadCountSpan.textContent = selectedCount;
+        }
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteCountSpan.textContent = selectedCount;
+        }
     } else {
-        btn.style.display = 'none';
+        if (downloadBtn) downloadBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
     }
 }
 
@@ -9209,7 +9237,7 @@ function addChunksToTable(chunks) {
 
         // Checkbox de selección
         const checkboxCell = document.createElement('td');
-        checkboxCell.innerHTML = `<input type="checkbox" class="chunk-checkbox" value="${chunk.file_name}" data-chunk="${JSON.stringify(chunk).replace(/"/g, '&quot;')}">`;
+        checkboxCell.innerHTML = `<input type="checkbox" class="chunk-checkbox" value="${chunk.file_name}" data-chunk="${JSON.stringify(chunk).replace(/"/g, '&quot;')}" data-backup-id="${chunk.backup_id}" data-chunk-number="${chunk.chunk_number}" data-file-name="${chunk.file_name}">`;
         row.appendChild(checkboxCell);
 
         // Nombre del archivo
@@ -9319,6 +9347,107 @@ function deleteSingleChunk(event, backupId, chunkNumber, fileName) {
         deleteButton.innerHTML = originalText;
         deleteButton.style.pointerEvents = 'auto';
     });
+}
+
+function deleteSelectedChunks() {
+    const selectedChunks = document.querySelectorAll('.chunk-checkbox:checked');
+    if (selectedChunks.length === 0) {
+        alert('No hay chunks seleccionados para eliminar.');
+        return;
+    }
+
+    const confirmMessage = `¿Estás seguro de eliminar ${selectedChunks.length} chunk(s)?\n\nEsta acción no se puede deshacer.`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    // Mostrar barra de progreso
+    const progressBar = document.getElementById('deleteProgress');
+    const progressBarInner = document.getElementById('deleteProgressBar');
+    const progressText = document.getElementById('deleteProgressText');
+    const progressPercent = document.getElementById('deleteProgressPercent');
+
+    if (progressBar) {
+        progressBar.style.display = 'block';
+        progressText.textContent = 'Eliminando...';
+        progressPercent.textContent = '0%';
+    }
+
+    let completed = 0;
+    const total = selectedChunks.length;
+
+    // Función para procesar chunks secuencialmente
+    function processNext(index) {
+        if (index >= selectedChunks.length) {
+            // Todos completados
+            if (progressBar) {
+                progressText.textContent = '¡Eliminación completada!';
+                progressPercent.textContent = '100%';
+                progressBarInner.style.width = '100%';
+                setTimeout(() => {
+                    progressBar.style.display = 'none';
+                    loadAvailableChunks(); // Recargar la lista
+                }, 2000);
+            }
+            return;
+        }
+
+        const checkbox = selectedChunks[index];
+        const backupId = checkbox.dataset.backupId;
+        const chunkNumber = checkbox.dataset.chunkNumber;
+        const fileName = checkbox.dataset.fileName;
+
+        // Actualizar progreso
+        const percent = Math.round(((index + 1) / total) * 100);
+        if (progressBarInner) {
+            progressBarInner.style.width = percent + '%';
+        }
+        if (progressPercent) {
+            progressPercent.textContent = percent + '%';
+        }
+        progressText.textContent = `Eliminando chunk ${index + 1} de ${total}...`;
+
+        // Enviar solicitud de eliminación
+        fetch('../scripts/cleanup_chunks.php?action=delete&t=' + Date.now(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'filename=' + encodeURIComponent(fileName)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                completed++;
+                console.log(`Chunk eliminado: ${fileName}`);
+            } else {
+                console.error(`Error eliminando chunk: ${fileName}`, data.error);
+            }
+            processNext(index + 1);
+        })
+        .catch(error => {
+            console.error(`Error en chunk: ${fileName}`, error);
+            processNext(index + 1);
+        });
+    }
+
+    // Iniciar procesamiento
+    processNext(0);
+}
+
+function cancelDelete() {
+    // Ocultar barra de progreso y mostrar mensaje
+    const progressBar = document.getElementById('deleteProgress');
+    if (progressBar) {
+        progressBar.style.display = 'none';
+        alert('Eliminación cancelada por el usuario.');
+    }
 }
 
 // Inicializar cuando se carga la página
